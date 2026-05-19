@@ -552,19 +552,28 @@ with col_mic:
 # --- STEP 1: ADD THIS NEW CSS BLOCK ON TOP ---
 st.markdown("""
 <style>
-    /* Force the text input box background and text to adjust dynamically */
-    div[data-baseweb="input"] {
+    /* Target the text input container background globally */
+    .stTextInput div[data-baseweb="input"] {
         background-color: var(--background-color) !important;
         border: 1px solid rgba(255, 255, 255, 0.2) !important;
     }
-    div[data-baseweb="input"] input {
+
+    /* Target the actual input field text colors directly */
+    .stTextInput input {
         color: var(--text-color) !important;
         -webkit-text-fill-color: var(--text-color) !important;
+        background-color: transparent !important;
     }
-    /* Style placeholder text so it's readable in both modes */
-    div[data-baseweb="input"] input::placeholder {
+
+    /* Target the placeholder text explicitly */
+    .stTextInput input::placeholder {
         color: var(--text-color) !important;
-        opacity: 0.6;
+        opacity: 0.6 !important;
+    }
+    
+    /* Optional: Fix the form wrapper styling if needed */
+    .premium-prompt-bar {
+        background-color: transparent !important;
     }
 </style>
 """, unsafe_allow_html=True)
