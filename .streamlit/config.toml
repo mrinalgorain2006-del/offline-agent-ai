@@ -1,6 +1,5 @@
 [theme]
 primaryColor = "#ff4b4b"
-backgroundColor = "#ffffff"       # Pure white for light mode background
-secondaryBackgroundColor = "#f0f2f6" # Light gray for sidebars/widgets
-textColor = "#111111"             # Deep dark gray so all text is perfectly readable!
+# We removed backgroundColor, secondaryBackgroundColor, and textColor!
+# This forces Streamlit to handle the text-to-background contrast dynamically.
 font = "sans serif"
