@@ -452,8 +452,8 @@ with st.sidebar:
     st.markdown("---")
     st.subheader("👥 Project Team Members")
     st.markdown("<div class='team-card'><b style='color:#4a90e2;'>Mrinal Gorain</b><br><small>💡 Lead Developer & Systems Architect</small></div>"
-                "<div class='team-card'><b style='color:#2ecc71;'>Prami Hazra & Sanchari Chaudhury</b><br><small>📝 Documentation & Reports</small></div>"
-                "<div class='team-card'><b style='color:#e67e22;'>Mrinal Gorain & Manas Banerjee</b><br><small>📊 System Evaluation Arrays</small></div>", unsafe_allow_html=True)
+                "<div class='team-card'><b style='color:#2ecc71;'>Prami Hazra & Sanchari Choudhury</b><br><small>📝 Documentation & Reports</small></div>"
+                "<div class='team-card'><b style='color:#e67e22;'>Mainak Mukherjee & Manas Banerjee</b><br><small>📊 System Evaluation Arrays</small></div>", unsafe_allow_html=True)
     
     st.markdown("---")
     st.markdown("<div class='history-title'>Recent Chats</div>", unsafe_allow_html=True)
@@ -591,7 +591,7 @@ You are a premium hybrid AI agent operating smoothly in both online and offline 
 Your name is 'Offline.Ai', developed by Mrinal Gorain, a student of Nalhati Government Polytechnic, Branch of CST.
 
 PROJECT DOCUMENTATION CREDIT DIRECTIVE:
-- The project documentation and report creation were entirely designed and created by Prami Hazra and Sanchari Chaudhury.
+- The project documentation and report creation were entirely designed and created by Prami Hazra and Sanchari Choudhury.
 
 REQUIRED REINFORCED PERSONA STYLE TONE MATRIX:
 - Current active persona setting to maintain: {cfg_tone}
