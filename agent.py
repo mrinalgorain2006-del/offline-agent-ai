@@ -20,9 +20,8 @@ LOCAL_OLLAMA_URL = "http://localhost:11434"
 SQLITE_DB_FILE = "chat_history.db"
 
 API_TOKEN = os.environ.get("API_TOKEN", "my_secret_token_731125")
-NEON_DATABASE_URL = os.environ.get("NEON_DATABASE_URL", "postgresql://neondb_owner:npg_cOan5sF7yRTU@ep-long-lake-aolrehwr.c-2.ap-southeast-1.aws.neon.tech/neondb?sslmode=require")
+NEON_DATABASE_URL = os.environ.get("DATABASE_URL", "postgresql://neondb_owner:npg_cOan5sF7yRTU@ep-long-lake-aolrehwr.c-2.ap-southeast-1.aws.neon.tech/neondb?sslmode=require")
 
-# Verify fallback online connectivity metrics
 def check_internet_connectivity():
     try:
         requests.get("https://1.1.1.1", timeout=2)
@@ -33,11 +32,15 @@ def check_internet_connectivity():
 if "is_online" not in st.session_state:
     st.session_state.is_online = check_internet_connectivity()
 
-# Secure fallback routing for cloud compilation instances
-if st.session_state.is_online:
-    client = Client(host="https://api.ollama.com")
-else:
-    client = Client(host=LOCAL_OLLAMA_URL)
+# ⚡ CRITICAL FIX: Safe client loader to prevent layout crashes if server is down
+OLLAMA_HOST_ENV = os.environ.get("OLLAMA_HOST", LOCAL_OLLAMA_URL)
+try:
+    if st.session_state.is_online and OLLAMA_HOST_ENV != LOCAL_OLLAMA_URL:
+        client = Client(host=OLLAMA_HOST_ENV, headers={"Authorization": f"Bearer {API_TOKEN}"}, verify=False)
+    else:
+        client = Client(host=LOCAL_OLLAMA_URL)
+except Exception:
+    client = None
 
 # =====================================================================
 #  🔒 LOGIN GATEWAY VALIDATION BLUEPRINT
@@ -52,19 +55,19 @@ def render_login_screen():
     st.markdown("""
         <div style='text-align: center; margin-top: 40px; margin-bottom: -20px;'>
             <h1 style='font-size: 2.8rem; font-weight: 800; background: linear-gradient(45deg, #4a90e2, #ff7e5f); -webkit-background-clip: text; -webkit-text-fill-color: transparent; letter-spacing: -1px;'>
-                Offline Agent.Ai
+                ⚡ Offline Agent.Ai
             </h1>
         </div>
     """, unsafe_allow_html=True)
 
-    st.markdown("<div style='max-width: 450px; margin: 80px auto; padding: 30px; background-color: var(--secondary-background-color); border-radius: 15px; border: 1px solid rgba(128, 128, 128, 0.2);'>", unsafe_allow_html=True)
-    st.title("Login Security Access Control")
+    st.markdown("<div style='max-width: 450px; margin: 80px auto; padding: 30px; background-color: var(--secondary-background-color); border-radius: 15px; border: 1px solid rgba(128, 128, 128, 0.2); box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.1);'>", unsafe_allow_html=True)
+    st.markdown("<h3>🔒 Security Access Control</h3>", unsafe_allow_html=True)
     st.caption("Enter credentials to unlock the Hybrid Agentic Workspace.")
     
     with st.form("security_gateway_form", clear_on_submit=False):
         input_user = st.text_input("Username Profile", placeholder="Enter username...", label_visibility="visible")
         input_pass = st.text_input("Password Security Key", type="password", placeholder="Enter secret password...", label_visibility="visible")
-        submit_login = st.form_submit_button("Unlock Core Systems", use_container_width=True)
+        submit_login = st.form_submit_button("Unlock Core Systems 🚀", use_container_width=True)
         
         if submit_login:
             if input_user == AUTHORIZED_USERNAME and input_pass == AUTHORIZED_PASSWORD:
@@ -73,16 +76,16 @@ def render_login_screen():
                 time.sleep(1)
                 st.rerun()
             else:
-                st.error("Invalid Credentials. Network access authentication failed.")
+                st.error("❌ Invalid Credentials. Network access authentication failed.")
                 
     st.markdown("</div>", unsafe_allow_html=True)
 
 if not st.session_state.login_authenticated:
-    st.set_page_config(page_title="Security Gateway", page_icon="🔑", layout="wide")
+    st.set_page_config(page_title="Security Gateway", page_icon="🔒", layout="wide")
     render_login_screen()
     st.stop()
 
-st.set_page_config(page_title="Agentic Workspace", page_icon="🧠", layout="wide")
+st.set_page_config(page_title="Agentic Workspace", page_icon="⚡", layout="wide")
 
 # =====================================================================
 #  2. HYBRID STORAGE BACKEND (POSTGRESQL OR SQLITE ROUTER)
@@ -230,26 +233,26 @@ def get_live_weather(city: str) -> str:
     try:
         geo_url = f"https://geocoding-api.open-meteo.com/v1/search?name={city.strip()}&count=1&language=en&format=json"
         geo_res = requests.get(geo_url, timeout=5).json()
-        if not geo_res.get("results"): return f"Location tracking failed for '{city}'."
+        if not geo_res.get("results"): return f"❌ Meteorological Error: Location tracking failed for '{city}'."
         lat, lon = geo_res["results"][0]["latitude"], geo_res["results"][0]["longitude"]
         weather_url = f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&current=temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,rain,cloud_cover,surface_pressure,wind_speed_10m"
         weather_res = requests.get(weather_url, timeout=5).json()
         current = weather_res["current"]
-        return f"""## WEATHER Telemetry FOR {city.upper()}\n* Core Temp: {current['temperature_2m']}C\n* Apparent Temp: {current['apparent_temperature']}C\n* Humidity: {current['relative_humidity_2m']}%"""
+        return f"""## 🌍 WEATHER Telemetry FOR {city.upper()}\n* Core Temp: {current['temperature_2m']}°C\n* Apparent Temp: {current['apparent_temperature']}°C\n* Humidity: {current['relative_humidity_2m']}%"""
     except Exception as e:
-        return f"Weather Sync Interrupted: {str(e)}"
+        return f"❌ Weather Sync Interrupted: {str(e)}"
 
 def get_world_news(topic: str) -> str:
     try:
         feed_url = f"https://news.google.com/rss/search?q={requests.utils.quote(topic.strip())}&hl=en-IN&gl=IN&ceid=IN:en"
         feed = feedparser.parse(feed_url)
-        if not feed.entries: return f"No live bulletins currently indexed for '{topic}'."
-        article_news = f"## DISPATCH: EDITORIAL LIVE NEWS ANALYSIS FOR '{topic.upper()}'\n\n"
+        if not feed.entries: return f"⚠️ News Wire Interruption: No live bulletins currently indexed for '{topic}'."
+        article_news = f"## 📰 DISPATCH: EDITORIAL LIVE NEWS ANALYSIS FOR '{topic.upper()}'\n\n"
         for i, entry in enumerate(feed.entries[:3]):
             article_news += f"### Segment {i+1}: {entry.title}\n* Press Source: **{entry.source.get('name')}**\n\n"
         return article_news
     except Exception as e:
-        return f"News Error: {str(e)}"
+        return f"❌ News Error: {str(e)}"
 
 def query_live_search(query: str) -> str:
     try:
@@ -260,12 +263,12 @@ def query_live_search(query: str) -> str:
         soup = BeautifulSoup(response.text, "html.parser")
         results = soup.find_all("a", class_="result__snippet")
         if not results: return get_world_news(query)
-        article_search = f"## DISPATCH: REAL-TIME SEARCH INDEX MATRIX FOR '{query.upper()}'\n\n"
+        article_search = f"## 📰 DISPATCH: REAL-TIME SEARCH INDEX MATRIX FOR '{query.upper()}'\n\n"
         for i, res in enumerate(results[:3]):
             article_search += f"### Segment {i+1}:\n{res.get_text().strip()}\n\n"
         return article_search
     except Exception as e:
-        return f"Search Pipeline Failure: {str(e)}"
+        return f"❌ Search Pipeline Failure: {str(e)}"
 
 tools_map = {"get_live_weather": get_live_weather, "get_world_news": get_world_news, "query_live_search": query_live_search}
 
@@ -283,34 +286,36 @@ if "speed_telemetry" not in st.session_state:
 
 # --- SIDEBAR CONTROL DASHBOARD ---
 with st.sidebar:
+    st.image("https://img.icons8.com/nolan/128/artificial-intelligence.png", width=60)
     st.title("OmniCore Systems")
     
     if st.session_state.is_online:
-        st.caption("Mode: Cloud Linked (Online)")
-        st.caption(f"Storage: {'PostgreSQL (Neon)' if USING_CLOUD_DB else 'SQLite (Local)'}")
+        st.caption("🟢 Mode: Cloud Linked (Online)")
+        st.caption(f"💾 Storage: {'PostgreSQL (Neon)' if USING_CLOUD_DB else 'SQLite (Local)'}")
     else:
-        st.caption("Mode: Edge Isolated (Offline)")
-        st.caption("Storage: SQLite (Local Fallback)")
+        st.caption("🔴 Mode: Edge Isolated (Offline)")
+        st.caption("💾 Storage: SQLite (Local Fallback)")
         
     st.markdown("---")
     
-    st.subheader("UI Workspace Theme")
+    st.subheader("🌓 UI Workspace Theme")
     theme_selection = st.radio(
         "Toggle Layout View",
-        ["Light Mode Default", "Dark Mode Premium"],
+        ["☀️ Light Mode Default", "🌙 Dark Mode Premium"],
         index=0,
         label_visibility="collapsed"
     )
     
-    # Unified Dynamic Layout Styles
-    if theme_selection == "Light Mode Default":
+    # Unified Dynamic Layout Styles with high-intensity overrides
+    if theme_selection == "☀️ Light Mode Default":
         st.markdown("""
             <style>
-            .stApp, [data-testid="stAppViewContainer"], [data-testid="stSidebar"] { background-color: #ffffff !important; color: #31333f !important; }
+            .stApp, [data-testid="stAppViewContainer"], [data-testid="stSidebar"] { background-color: #ffffff !important; color: #111111 !important; }
             :root { 
-                --text-color: #31333f !important; 
+                --text-color: #111111 !important; 
                 --secondary-background-color: #f0f2f6 !important; 
                 --input-bg: #f0f2f6 !important;
+                --card-bg: #f8f9fa !important;
             }
             </style>
         """, unsafe_allow_html=True)
@@ -322,6 +327,7 @@ with st.sidebar:
                 --text-color: #fafafa !important; 
                 --secondary-background-color: #1d2430 !important; 
                 --input-bg: #1d2430 !important;
+                --card-bg: #1f2937 !important;
             }
             </style>
         """, unsafe_allow_html=True)
@@ -334,10 +340,10 @@ with st.sidebar:
         st.session_state.chat_history = []
         st.rerun()
 
-    cfg_tone = st.selectbox("Persona Profile", ["Standard Agent", "Expert Professor", "Code Auditor", "Brief Summary Node"])
+    cfg_tone = st.selectbox("🎭 Persona Profile", ["Standard Agent", "Expert Professor", "Code Auditor", "Brief Summary Node"])
     
     st.markdown("---")
-    st.subheader("Project Team Members")
+    st.subheader("👥 Project Team Members")
     st.markdown("<div style='background-color: var(--secondary-background-color); padding: 12px; border-radius: 8px; margin-bottom: 8px; border: 1px solid rgba(128,128,128,0.15);'><b style='color:#4a90e2;'>Mrinal Gorain</b><br><small>Lead Developer & Systems Architect</small></div>"
                 "<div style='background-color: var(--secondary-background-color); padding: 12px; border-radius: 8px; margin-bottom: 8px; border: 1px solid rgba(128,128,128,0.15);'><b style='color:#2ecc71;'>Prami Hazra & Sanchari Choudhury</b><br><small>Documentation & Reports</small></div>"
                 "<div style='background-color: var(--secondary-background-color); padding: 12px; border-radius: 8px; margin-bottom: 8px; border: 1px solid rgba(128,128,128,0.15);'><b style='color:#e67e22;'>Mainak Mukherjee & Manas Banerjee</b><br><small>System Evaluation Arrays</small></div>", unsafe_allow_html=True)
@@ -348,7 +354,7 @@ with st.sidebar:
     
     if recent_prompts:
         for prompt_heading in recent_prompts:
-            if st.button(f"Chat: {prompt_heading}", key=f"hist_{prompt_heading}", use_container_width=True):
+            if st.button(f"💬 {prompt_heading}", key=f"hist_{prompt_heading}", use_container_width=True):
                 st.session_state.active_display = prompt_heading
                 st.session_state.active_payload = prompt_heading
                 st.rerun()
@@ -367,7 +373,7 @@ with st.sidebar:
         st.rerun()
     
     st.markdown("---")
-    st.subheader("Thought Stream Tracing")
+    st.subheader("🧠 Thought Stream Tracing")
     cfg_verbose = st.checkbox("Show Live Telemetry Debugger", value=True)
     st.caption(f"System RAM Footprint: {sys.getsizeof(st.session_state.chat_history)} Bytes")
     
@@ -379,26 +385,26 @@ with st.sidebar:
         st.rerun()
 
 # --- MAIN CHAT PANEL ---
-st.title("Offline Smart Agentic Workspace")
+st.markdown("<h1 style='font-size: 2.5rem; font-weight: 800; background: linear-gradient(45deg, #4a90e2, #ff7e5f); -webkit-background-clip: text; -webkit-text-fill-color: transparent;'>⚡ Offline Smart Agentic Workspace</h1>", unsafe_allow_html=True)
 st.caption(f"Core Computation Velocity Node: `{st.session_state.speed_telemetry}`")
 
 # Display conversation logs
 for message in st.session_state.chat_history:
     with st.chat_message(message["role"]):
-        st.markdown(message["content"])
+        st.markdown(f"<div style='background-color: var(--card-bg); padding: 15px; border-radius: 12px; border: 1px solid rgba(128,128,128,0.15);'>{message['content']}</div>", unsafe_allow_html=True)
 
 # Quick Access Shortcut Pills
 pill_cols = st.columns(3)
 with pill_cols[0]:
-    if st.button("Auditing Error Logs", use_container_width=True): 
+    if st.button("🔍 Auditing Error Logs", use_container_width=True): 
         st.session_state.gemini_text_box = "Explain structural error parameters in this file context:"
         st.rerun()
 with pill_cols[1]:
-    if st.button("Step-by-Step Math Solving", use_container_width=True): 
+    if st.button("📊 Step-by-Step Math Solving", use_container_width=True): 
         st.session_state.gemini_text_box = "Solve this complex mathematical equation step-by-step:"
         st.rerun()
 with pill_cols[2]:
-    if st.button("Daily Live News Bulletins", use_container_width=True): 
+    if st.button("📰 Daily Live News Bulletins", use_container_width=True): 
         st.session_state.gemini_text_box = "Give me international live current affairs updates"
         st.rerun()
 
@@ -421,7 +427,8 @@ voice_text_transcription = None
 col_file, col_mic, col_spacer = st.columns([5.0, 2.5, 4.5])
 
 with col_file:
-    uploaded_doc = st.file_uploader("Upload Context", type=["txt", "json", "c", "py", "html", "csv"], key="gemini_file_node")
+    st.markdown("<div style='font-size: 14px; font-weight: 600; margin-bottom: 4px;'>📂 Upload Context</div>", unsafe_allow_html=True)
+    uploaded_doc = st.file_uploader("Upload Context", type=["txt", "json", "c", "py", "html", "csv"], key="gemini_file_node", label_visibility="collapsed")
     if uploaded_doc is not None:
         try:
             file_raw = uploaded_doc.read().decode("utf-8", errors="ignore")
@@ -430,7 +437,7 @@ with col_file:
             st.error(f"Err: {str(e)}")
 
 with col_mic:
-    st.write("Voice input microphone:")
+    st.markdown("<div style='font-size: 14px; font-weight: 600; margin-bottom: 4px;'>🎙️ Voice Mic</div>", unsafe_allow_html=True)
     voice_text_transcription = speech_to_text(start_prompt="Record", stop_prompt="Stop", language="en", just_once=True, key="gemini_mic_stream")
     if voice_text_transcription:
         st.session_state.active_display = voice_text_transcription
@@ -439,11 +446,12 @@ with col_mic:
 # --- CORE PREMIUM CSS OVERRIDE SYSTEM ---
 st.markdown("""
 <style>
-    /* Direct core widget text-input layout safety tracking specs */
+    /* Absolute target to maintain input container background visibility across dark settings */
     .stTextInput div[data-baseweb="input"] {
         background-color: var(--input-bg) !important;
-        border: 1px solid rgba(128, 128, 128, 0.3) !important;
-        border-radius: 12px !important;
+        border: 1px solid rgba(128, 128, 128, 0.4) !important;
+        border-radius: 14px !important;
+        padding: 4px 12px !important;
     }
     .stTextInput input {
         color: var(--text-color) !important;
@@ -454,18 +462,20 @@ st.markdown("""
         opacity: 0.5 !important;
     }
     
-    /* Clean overrides for buttons preventing text wrapping issues */
+    /* Lock alignment variables of form submission buttons */
     div[data-testid="stFormSubmitButton"] button {
         width: 100% !important;
         white-space: nowrap !important;
-        min-width: 90px !important;
+        border-radius: 14px !important;
+        background-color: #4a90e2 !important;
+        color: white !important;
+        font-weight: bold !important;
+        height: 46px !important;
     }
     div[data-testid="stForm"] {
         border: none !important;
         padding: 0px !important;
     }
-    
-    /* High-end decorative left card accents */
     .log-card { 
         background-color: var(--secondary-background-color); 
         color: var(--text-color); 
@@ -480,13 +490,13 @@ st.markdown("""
 
 # --- THE PROMPT INPUT FORM BAR ---
 with st.form("multimodal_prompt_form", clear_on_submit=True):
-    col_text_field, col_submit_button = st.columns([10.5, 1.5])
+    col_text_field, col_submit_button = st.columns([10.2, 1.8])
     
     with col_text_field:
         text_input_query = st.text_input("Prompt Box Field", placeholder="Ask Offline.Ai or utilize speech/document layers...", label_visibility="collapsed", key="gemini_text_box")
         
     with col_submit_button:
-        submit_triggered = st.form_submit_button("Submit", on_click=handle_submission_callback)
+        submit_triggered = st.form_submit_button("Submit 🚀", on_click=handle_submission_callback)
 
 if file_payload_string and st.session_state.active_payload:
     if not st.session_state.active_payload.endswith(file_payload_string):
@@ -512,7 +522,10 @@ if st.session_state.active_display:
         response_placeholder = st.empty()
         response_placeholder.markdown("⏳ *Accessing intelligence matrix...*")
         
-        system_rules = f"""
+        if client is None:
+            response_placeholder.error("❌ Model Integration Sync Offline: The underlying inference connector could not bind initialization rules. Ensure your remote proxy container is running.")
+        else:
+            system_rules = f"""
 You are a premium hybrid AI agent operating smoothly in both online and offline network frames.
 Your name is 'Offline.Ai', developed by Mrinal Gorain, a student of Nalhati Government Polytechnic, Branch of CST.
 
@@ -536,8 +549,8 @@ CRITICAL MULTILINGUAL LANGUAGE MATRIX DIRECTIVE:
 CURRENT NETWORK STATE STATUS:
 - System is currently executing inside an {'ONLINE' if st.session_state.is_online else 'OFFLINE'} environment.
 """
-        if st.session_state.is_online:
-            system_rules += """
+            if st.session_state.is_online:
+                system_rules += """
 Tools Directory (Active only when Online):
 1. Weather queries: {"tool": "get_live_weather", "argument": "CITY_NAME"}
 2. General topic news: {"tool": "get_world_news", "argument": "TOPIC_KEYWORDS"}
@@ -545,89 +558,89 @@ Tools Directory (Active only when Online):
 
 If the request requires live data parameters, you MUST output a tool calling using valid JSON formatting.
 """
-        else:
-            system_rules += "\nSystem is offline. Solve all math and logical data queries natively via local weights."
-
-        agent_context = [{"role": "system", "content": system_rules}]
-        for past_msg in st.session_state.chat_history[-4:]:
-            agent_context.append({"role": past_msg["role"], "content": past_msg["content"]})
-            
-        if file_payload_string:
-            agent_context.append({"role": "user", "content": final_query_payload})
-
-        running_logs = ""
-        tool_executed = False
-        final_text_output = ""
-        
-        try:
-            if st.session_state.is_online:
-                for processing_step in range(2):
-                    llm_response = client.chat(
-                        model="llama3", 
-                        messages=agent_context,
-                        options={"temperature": 0.1, "num_predict": 100, "top_k": 20, "num_thread": 4}
-                    )
-                    raw_content = llm_response['message']['content'].strip()
-                    try:
-                        tool_call = json.loads(raw_content)
-                        if "tool" in tool_call and tool_call["tool"] in tools_map:
-                            t_name = tool_call["tool"]
-                            t_arg = tool_call["argument"]
-                            if cfg_verbose:
-                                running_logs += f"Thought Trace: AI deployed tool `{t_name}` for `{t_arg}`.\n\n"
-                                log_placeholder.markdown(f"<div class='log-card'>{running_logs}</div>", unsafe_allow_html=True)
-                            final_text_output = tools_map[t_name](t_arg)
-                            tool_executed = True
-                            if cfg_verbose:
-                                running_logs += f"Data Returned Successfully.\n\n"
-                                log_placeholder.markdown(f"<div class='log-card'>{running_logs}</div>", unsafe_allow_html=True)
-                            break
-                    except json.JSONDecodeError:
-                        break
-                
-                if not tool_executed:
-                    user_query_clean = display_user_query.lower()
-                    if any(w_kwd in user_query_clean for w_kwd in ["weather", "temperature", "temp", "rain", "humidity"]):
-                        city_target = "Nalhati"
-                        for word in display_user_query.split():
-                            clean_word = word.strip("?,.!")
-                            if clean_word.title() not in ["Live", "Weather", "Report", "Of", "In", "What", "Is"]:
-                                city_target = clean_word
-                                break
-                        final_text_output = get_live_weather(city_target)
-                        tool_executed = True
-                    elif any(f_kwd in user_query_clean for f_kwd in ["cm", "news", "minister", "current affairs"]):
-                        final_text_output = query_live_search(display_user_query)
-                        tool_executed = True
-
-            if tool_executed:
-                st.session_state.chat_history.append({"role": "assistant", "content": final_text_output})
-                save_message("assistant", final_text_output)
-                st.rerun()
             else:
-                start_time = time.time()
-                stats_tracker = [0]
-                
-                def text_stream_generator():
-                    stream_res = client.chat(
-                        model="llama3", 
-                        messages=agent_context, 
-                        stream=True,
-                        options={"temperature": 0.1, "num_thread": 4}
-                    )
-                    for chunk in stream_res:
-                        stats_tracker[0] += 1
-                        yield chunk['message']['content']
+                system_rules += "\nSystem is offline. Solve all math and logical data queries natively via local weights."
 
-                full_response = response_placeholder.write_stream(text_stream_generator())
-                elapsed_time = time.time() - start_time
-                if elapsed_time > 0:
-                    st.session_state.speed_telemetry = f"{round(stats_tracker[0] / elapsed_time, 1)} tokens/sec"
+            agent_context = [{"role": "system", "content": system_rules}]
+            for past_msg in st.session_state.chat_history[-4:]:
+                agent_context.append({"role": past_msg["role"], "content": past_msg["content"]})
+                
+            if file_payload_string:
+                agent_context.append({"role": "user", "content": final_query_payload})
+
+            running_logs = ""
+            tool_executed = False
+            final_text_output = ""
+            
+            try:
+                if st.session_state.is_online:
+                    for processing_step in range(2):
+                        llm_response = client.chat(
+                            model="llama3", 
+                            messages=agent_context,
+                            options={"temperature": 0.1, "num_predict": 100, "top_k": 20, "num_thread": 4}
+                        )
+                        raw_content = llm_response['message']['content'].strip()
+                        try:
+                            tool_call = json.loads(raw_content)
+                            if "tool" in tool_call and tool_call["tool"] in tools_map:
+                                t_name = tool_call["tool"]
+                                t_arg = tool_call["argument"]
+                                if cfg_verbose:
+                                    running_logs += f"Thought Trace: AI deployed tool `{t_name}` for `{t_arg}`.\n\n"
+                                    log_placeholder.markdown(f"<div class='log-card'>{running_logs}</div>", unsafe_allow_html=True)
+                                final_text_output = tools_map[t_name](t_arg)
+                                tool_executed = True
+                                if cfg_verbose:
+                                    running_logs += f"Data Returned Successfully.\n\n"
+                                    log_placeholder.markdown(f"<div class='log-card'>{running_logs}</div>", unsafe_allow_html=True)
+                                break
+                        except json.JSONDecodeError:
+                            break
                     
-                st.session_state.chat_history.append({"role": "assistant", "content": full_response})
-                save_message("assistant", full_response)
-        except Exception as conn_err:
-            response_placeholder.error(f"Cloud Connectivity Notice: Local model inference is offline. ({str(conn_err)})")
+                    if not tool_executed:
+                        user_query_clean = display_user_query.lower()
+                        if any(w_kwd in user_query_clean for w_kwd in ["weather", "temperature", "temp", "rain", "humidity"]):
+                            city_target = "Nalhati"
+                            for word in display_user_query.split():
+                                clean_word = word.strip("?,.!")
+                                if clean_word.title() not in ["Live", "Weather", "Report", "Of", "In", "What", "Is"]:
+                                    city_target = clean_word
+                                    break
+                            final_text_output = get_live_weather(city_target)
+                            tool_executed = True
+                        elif any(f_kwd in user_query_clean for f_kwd in ["cm", "news", "minister", "current affairs"]):
+                            final_text_output = query_live_search(display_user_query)
+                            tool_executed = True
+
+                if tool_executed:
+                    st.session_state.chat_history.append({"role": "assistant", "content": final_text_output})
+                    save_message("assistant", final_text_output)
+                    st.rerun()
+                else:
+                    start_time = time.time()
+                    stats_tracker = [0]
+                    
+                    def text_stream_generator():
+                        stream_res = client.chat(
+                            model="llama3", 
+                            messages=agent_context, 
+                            stream=True,
+                            options={"temperature": 0.1, "num_thread": 4}
+                        )
+                        for chunk in stream_res:
+                            stats_tracker[0] += 1
+                            yield chunk['message']['content']
+
+                    full_response = response_placeholder.write_stream(text_stream_generator())
+                    elapsed_time = time.time() - start_time
+                    if elapsed_time > 0:
+                        st.session_state.speed_telemetry = f"{round(stats_tracker[0] / elapsed_time, 1)} tokens/sec"
+                        
+                    st.session_state.chat_history.append({"role": "assistant", "content": full_response})
+                    save_message("assistant", full_response)
+            except Exception as conn_err:
+                response_placeholder.error(f"⚠️ Core Framework Exception Notice: Cloud backend link could not parse model tokens. Check that your Ubuntu ngrok host tunnel parameter is active.")
 
         st.components.v1.html("""
             <script>
