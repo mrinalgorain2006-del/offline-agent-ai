@@ -82,7 +82,7 @@ st.markdown("""
         -webkit-text-fill-color: #0f172a !important;
     }
 
-    /* 5. TEAM CARD CONTAINER DECORATORS (FORCE INLINE TEXT COLORS) */
+    /* 5. TEAM CARD CONTAINER DECORATORS WITH PREMIUM LEFT ACCENT BARS */
     .team-box { 
         background-color: #f1f5f9 !important; 
         border: 1px solid #e2e8f0 !important; 
@@ -114,18 +114,16 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # =====================================================================
-#  1. CLOUD STORAGE ROUTER & PERSISTENT DATA SCHEMA (NEON ENVIRONMENT)
+#  🏛️ CORE SYSTEM COMPONENT CHANNELS (THE 10 ALIGNED FUNCTIONS)
 # =====================================================================
 SQLITE_DB_FILE = "chat_history.db"
 NEON_DATABASE_URL = "postgresql://neondb_owner:npg_cOan5sF7yRTU@ep-long-lake-aolrehwr.c-2.ap-southeast-1.aws.neon.tech/neondb?sslmode=require"
-
-# FIXED: Modern Global Proxy Routing Gateway URL to pass through Streamlit cloud firewalls
 CLOUD_INFERENCE_URL = "https://router.huggingface.co/v1/chat/completions"
 
 if "CLOUD_API_KEY" in st.secrets:
     CLOUD_API_KEY = st.secrets["CLOUD_API_KEY"]
 else:
-    CLOUD_API_KEY = "Bearer hf_DEFAULT_MOCK_KEY"  # Fallback
+    CLOUD_API_KEY = "Bearer hf_DEFAULT_MOCK_KEY"
 
 try:
     import psycopg2
@@ -134,11 +132,13 @@ try:
 except ImportError:
     USING_CLOUD_DB = False
 
+# FUNCTION 1: Thread Pool Target Database Connection Gateway Selector
 def get_db_connection():
     if USING_CLOUD_DB:
         return psycopg2.connect(NEON_DATABASE_URL, sslmode="require")
     return sqlite3.connect(SQLITE_DB_FILE)
 
+# FUNCTION 2: Relational Cloud Infrastructure Schema Instantiation Module
 def init_db():
     conn = get_db_connection()
     cursor = conn.cursor()
@@ -151,6 +151,7 @@ def init_db():
     conn.commit()
     conn.close()
 
+# FUNCTION 3: Secure Auditable Sync Dialogue Log Appender 
 def save_message(username, sender, text):
     try:
         conn = get_db_connection()
@@ -162,6 +163,7 @@ def save_message(username, sender, text):
     except Exception:
         pass
 
+# FUNCTION 4: Academic Registration Transaction Dispatcher
 def register_user_in_db(uid, pwd):
     try:
         conn = get_db_connection()
@@ -174,6 +176,7 @@ def register_user_in_db(uid, pwd):
     except Exception:
         return False
 
+# FUNCTION 5: Identity Encryption Validation Interceptor
 def validate_user_login_db(uid, pwd):
     try:
         conn = get_db_connection()
@@ -188,6 +191,7 @@ def validate_user_login_db(uid, pwd):
     except Exception:
         return False
 
+# FUNCTION 6: System Administration Registry Scanner Matrix (ID Access ONLY)
 def fetch_all_users_raw():
     try:
         conn = get_db_connection()
@@ -199,6 +203,7 @@ def fetch_all_users_raw():
     except Exception:
         return []
 
+# FUNCTION 7: Hardware Access Token Revocation Controller
 def change_user_status_db(uid, target_status):
     try:
         conn = get_db_connection()
@@ -210,6 +215,19 @@ def change_user_status_db(uid, target_status):
     except Exception:
         pass
 
+# FUNCTION 7B: Delete User Target Function
+def delete_user_from_db(uid):
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        param = "%s" if USING_CLOUD_DB else "?"
+        cursor.execute(f"DELETE FROM student_profiles WHERE student_uid = {param}", (uid,))
+        conn.commit()
+        conn.close()
+    except Exception:
+        pass
+
+# FUNCTION 8: Reinforcement Learning Reward Array Committer
 def save_rl_feedback(prompt, response, score):
     try:
         conn = get_db_connection()
@@ -221,6 +239,7 @@ def save_rl_feedback(prompt, response, score):
     except Exception:
         pass
 
+# FUNCTION 9: Historical Chat Buffer Back-Log Sync Module
 def load_user_chat_history(username):
     try:
         conn = get_db_connection()
@@ -233,6 +252,7 @@ def load_user_chat_history(username):
     except Exception:
         return []
 
+# FUNCTION 10: Dynamic Deduplicated Query Index Compactor
 def get_unique_sidebar_titles(username):
     try:
         conn = get_db_connection()
@@ -254,13 +274,6 @@ def get_unique_sidebar_titles(username):
         return []
 
 init_db()
-
-# Establish Online State Tracker
-try:
-    requests.get("https://1.1.1.1", timeout=2)
-    st.session_state.is_online = True
-except Exception:
-    st.session_state.is_online = False
 
 # =====================================================================
 #  🔒 TWIN-CHANNEL PRIVACY GATEWAY (SIGN UP & DUAL LOGIN)
@@ -325,7 +338,7 @@ if st.session_state.login_role is None:
     st.stop()
 
 # =====================================================================
-#  3. WEB INTEGRATED RETRIEVAL EXTRACTOR TELEMETRIES (RAG)
+#  🛰️ REAL-TIME TELEMETRY EXTRACTOR ENGINES (RAG)
 # =====================================================================
 def get_live_weather(location_query: str) -> str:
     try:
@@ -355,7 +368,7 @@ def query_live_search(query: str) -> str:
     except Exception: return ""
 
 # =====================================================================
-#  4. SIDEBAR CONFIGURATION & CONTROL GRIDS
+#  🎛️ SIDEBAR MANAGEMENT DECK & CREDITS LAYOUT
 # =====================================================================
 with st.sidebar:
     st.image("https://img.icons8.com/nolan/128/artificial-intelligence.png", width=50)
@@ -366,47 +379,69 @@ with st.sidebar:
     st.markdown("---")
     cfg_tone = st.selectbox("🎭 Engine Persona Matrix", ["Standard Agent", "Expert Professor", "Code Auditor", "Brief Summary Node"])
     
+    # ADVANCED WORKER ADMIN ROSTER INTERFACE
     if st.session_state.login_role == "admin":
         st.markdown("---")
         st.subheader("👥 Registered User Status Node")
-        st.caption("Review user indices or deactivate network privileges:")
-        
         user_rows = fetch_all_users_raw()
         if user_rows:
             for uid_tag, active_flag in user_rows:
-                col_name, col_action = st.columns([6.0, 4.0])
-                with col_name:
-                    status_emoji = "🟢" if int(active_flag) == 1 else "🔴"
-                    st.markdown(f"{status_emoji} `{uid_tag}`")
-                with col_action:
+                st.markdown(f"👤 **User ID:** `{uid_tag}`")
+                c_status, c_del = st.columns([1.0, 1.0])
+                with c_status:
                     if int(active_flag) == 1:
-                        if st.button("Deactivate", key=f"deact_{uid_tag}", use_container_width=True):
+                        if st.button("🟢 Deactivate", key=f"deact_{uid_tag}", use_container_width=True):
                             change_user_status_db(uid_tag, 0)
                             st.toast(f"Suspended workspace permissions for {uid_tag}!")
                             time.sleep(0.4)
                             st.rerun()
                     else:
-                        if st.button("Activate", key=f"act_{uid_tag}", use_container_width=True):
+                        if st.button("🔴 Activate", key=f"act_{uid_tag}", use_container_width=True):
                             change_user_status_db(uid_tag, 1)
                             st.toast(f"Re-activated workspace permissions for {uid_tag}!")
                             time.sleep(0.4)
                             st.rerun()
+                with c_del:
+                    if st.button("🗑️ Delete", key=f"del_{uid_tag}", use_container_width=True):
+                        delete_user_from_db(uid_tag)
+                        st.toast(f"Purged profile records for {uid_tag}!")
+                        time.sleep(0.4)
+                        st.rerun()
+                st.markdown("<hr style='margin: 4px 0px; border-color: #cbd5e1;' />", unsafe_allow_html=True)
         else:
-            st.caption("Zero student accounts registered in system records.")
+            st.caption("Zero student accounts registered.")
             
-    if st.session_state.login_role == "user" or st.session_state.login_role == "admin":
+    if st.session_state.login_role in ["user", "admin"]:
         st.markdown("---")
         st.subheader("📋 Recent Sidebar Queries")
         sidebar_history_links = get_unique_sidebar_titles(st.session_state.login_username)
         if sidebar_history_links:
             for past_link_title in sidebar_history_links:
                 if st.button(f"💬 {past_link_title}", key=f"side_{past_link_title}", use_container_width=True):
-                    st.session_state.active_display = past_link_title
                     st.session_state.active_payload = past_link_title
+                    st.session_state.active_display = past_link_title
                     st.rerun()
         else:
             st.caption("No session queries stored yet.")
             
+    st.markdown("---")
+    # HIGH-CONTRAST LEFT-ACCENT BAR PREMIUM UI DEVELOPER ROSTER DECK
+    st.subheader("🛠| Project Architecture Deck")
+    st.markdown("""
+        <div class='team-box' style='border-left: 5px solid #4a90e2 !important;'>
+            <b style='color: #4a90e2 !important; font-size: 15px;'>Mrinal Gorain</b><br>
+            <small style='color: #475569 !important; font-weight: 600;'>Lead Developer & Systems Architect</small>
+        </div>
+        <div class='team-box' style='border-left: 5px solid #2ecc71 !important;'>
+            <b style='color: #2ecc71 !important; font-size: 15px;'>Prami Hazra & Sanchari Choudhury</b><br>
+            <small style='color: #475569 !important; font-weight: 600;'>Documentation & Reports</small>
+        </div>
+        <div class='team-box' style='border-left: 5px solid #e67e22 !important;'>
+            <b style='color: #e67e22 !important; font-size: 15px;'>Mainak Mukherjee & Manas Banerjee</b><br>
+            <small style='color: #475569 !important; font-weight: 600;'>System Evaluation Arrays</small>
+        </div>
+    """, unsafe_allow_html=True)
+    
     st.markdown("---")
     if st.button("Initialize Fresh Session Layout", use_container_width=True):
         st.session_state.chat_history = []
@@ -421,7 +456,7 @@ with st.sidebar:
         st.rerun()
 
 # =====================================================================
-#  5. MAIN PAGE LAYOUT ENGINE (LANDING WITH SEARCH FIRST)
+#  💬 MAIN CONSOLE VIEWPORT ENGINE
 # =====================================================================
 if len(st.session_state.chat_history) > 0:
     st.markdown("### 💬 Current Session Log Streams")
@@ -444,7 +479,7 @@ if len(st.session_state.chat_history) > 0:
 
 st.markdown("---")
 
-# Optimized Document Input & Voice Recorder Layout
+# Document Input & Voice Recorder Container Slots
 col_file, col_mic = st.columns([6.0, 6.0])
 file_context, mic_transcription = "", None
 
@@ -464,7 +499,7 @@ with col_mic:
     st.markdown("**🎙️ Record Audio Voice Prompts**")
     mic_transcription = speech_to_text(start_prompt="Record Voice 🎙️", stop_prompt="Halt 🟥", language="en", just_once=True)
 
-# Central Search Container Form Interface
+# Centralized Search Container Interface (Default Input Routing Language: English)
 with st.form("central_agent_search_boundary", clear_on_submit=True):
     col_field, col_btn = st.columns([10.0, 2.0])
     with col_field:
@@ -472,7 +507,7 @@ with st.form("central_agent_search_boundary", clear_on_submit=True):
     with col_btn:
         triggered = st.form_submit_button("Query Engine 🚀", use_container_width=True)
 
-# Synchronization logic bounds
+# Synchronization Pipeline Matrix
 final_query = ""
 if triggered and ui_input.strip():
     final_query = ui_input.strip()
@@ -487,15 +522,16 @@ if final_query:
     if uploaded: display_string += f" 📎 (Attached Document File: {uploaded.name})"
     
     payload_string = f"{final_query} {file_context}"
-    
     st.session_state.chat_history.append({"role": "user", "content": display_string})
     save_message(st.session_state.login_username, "user", display_string)
     
     with st.chat_message("assistant"):
         placeholder = st.empty()
+        
+        # REQUIRED 10: Clean Thinking placeholder without showing HTML card boundaries early
         placeholder.markdown("🧠 **Thinking... accessing serverless cloud layers... [0% local system load matching]**")
         
-        # Execute Live Tools
+        # Run Real-Time RAG Extraction Tools
         web_data = ""
         q_low = final_query.lower()
         if any(x in q_low for x in ["weather", "temperature", "temp", "climate"]):
@@ -508,6 +544,7 @@ if final_query:
         rules = f"""You are the premium cloud-offloaded intelligence layer of 'Offline.Ai', built by Mrinal Gorain from Nalhati Government Polytechnic, CST department.
 Project portfolio documentation was compiled by Prami Hazra and Sanchari Choudhury.
 Persona Setting: {cfg_tone}
+Default Interface Language: English.
 
 CRITICAL MATHEMATICAL LATEX FORMATTING RULES:
 - Use $inline$ for running equations and $$display$$ notation blocks for standalone multi-line equations.
@@ -520,8 +557,6 @@ CONTEXT REFERENCE PACK:
 """
         
         headers = {"Authorization": CLOUD_API_KEY, "Content-Type": "application/json"}
-        
-        # FIXED: Structured standard OpenAI Open-API Completions array matrix payload
         chat_payload = {
             "model": "meta-llama/Meta-Llama-3-8B-Instruct",
             "messages": [
@@ -541,7 +576,6 @@ CONTEXT REFERENCE PACK:
                 full_text = "Serverless pipeline returned an empty response stream. Please re-trigger the query engine."
             else:
                 res_json = response.json()
-                # Parse Chat Completion JSON structure cleanly
                 if isinstance(res_json, dict) and "choices" in res_json:
                     full_text = res_json["choices"][0]["message"]["content"].strip()
                 elif isinstance(res_json, dict) and "error" in res_json:
@@ -552,11 +586,12 @@ CONTEXT REFERENCE PACK:
             if t_delta > 0 and "full_text" in locals():
                 st.session_state.speed_telemetry = f"{round(len(full_text.split()) / t_delta, 1)} words/sec (Serverless Compute)"
             
-            placeholder.markdown(full_text)
+            # Switch back to UI components and append history streams
+            placeholder.markdown(f"<div class='chat-card'>{full_text}</div>", unsafe_allow_html=True)
             st.session_state.chat_history.append({"role": "assistant", "content": full_text})
             save_message(st.session_state.login_username, "assistant", full_text)
             
         except Exception as ex:
             placeholder.error(f"Cloud Inference Connection Exception: {str(ex)}")
 
-    st.write("")  # Flushes buffer cleanly
+    st.write("")
