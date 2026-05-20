@@ -104,6 +104,9 @@ st.markdown("""
         -webkit-text-fill-color: #ffffff !important;
     }
     div[data-testid="stForm"] { border: none !important; padding: 0px !important; box-shadow: none !important; }
+    
+    /* 7. CUSTOM REINFORCEMENT LEARNING PILLS SCALER */
+    .feedback-container { display: flex; gap: 10px; margin-top: -8px; margin-bottom: 12px; padding-left: 5px; }
     </style>
 """, unsafe_allow_html=True)
 chat_bubble_accent = "rgba(0,0,0,0.03)"
@@ -182,7 +185,7 @@ if not st.session_state.login_authenticated:
     st.stop()
 
 # =====================================================================
-#  2. HYBRID STORAGE BACKEND (POSTGRESQL OR SQLITE ROUTER)
+#  2. HYBRID STORAGE & RL TRAINING BACKEND (UPGRADED FOR MACHINE LEARNING)
 # =====================================================================
 if st.session_state.is_online and NEON_DATABASE_URL and NEON_DATABASE_URL != "postgresql://neondb_owner:npg_cOan5sF7yRTU@ep-long-lake-aolrehwr.c-2.ap-southeast-1.aws.neon.tech/neondb?sslmode=require":
     import psycopg2
@@ -205,7 +208,14 @@ def init_db():
                     sender TEXT NOT NULL,
                     message_text TEXT NOT NULL,
                     timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                )
+                );
+                CREATE TABLE IF NOT EXISTS reinforcement_feedback (
+                    id SERIAL PRIMARY KEY,
+                    prompt TEXT NOT NULL,
+                    response TEXT NOT NULL,
+                    reward_score INTEGER NOT NULL,
+                    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                );
             ''')
             conn.commit()
             cursor.close()
@@ -222,6 +232,15 @@ def init_db():
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             sender TEXT NOT NULL,
             message_text TEXT NOT NULL,
+            timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS reinforcement_feedback (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            prompt TEXT NOT NULL,
+            response TEXT NOT NULL,
+            reward_score INTEGER NOT NULL,
             timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
         )
     ''')
@@ -243,6 +262,25 @@ def save_message(sender, text):
     conn = sqlite3.connect(SQLITE_DB_FILE)
     cursor = conn.cursor()
     cursor.execute('INSERT INTO logs (sender, message_text) VALUES (?, ?)', (sender, text))
+    conn.commit()
+    conn.close()
+
+# 🧠 REINFORCEMENT LEARNING DATA LOGGER: Saves human preference parameters (+1 / -1) to log arrays
+def save_rl_feedback(prompt, response, score):
+    if USING_CLOUD_DB:
+        try:
+            conn = get_cloud_connection()
+            cursor = conn.cursor()
+            cursor.execute('INSERT INTO reinforcement_feedback (prompt, response, reward_score) VALUES (%s, %s, %s)', (prompt, response, score))
+            conn.commit()
+            cursor.close()
+            conn.close()
+            return
+        except Exception:
+            pass
+    conn = sqlite3.connect(SQLITE_DB_FILE)
+    cursor = conn.cursor()
+    cursor.execute('INSERT INTO reinforcement_feedback (prompt, response, reward_score) VALUES (?, ?, ?)', (prompt, response, score))
     conn.commit()
     conn.close()
 
@@ -326,13 +364,9 @@ init_db()
 if len(st.session_state.chat_history) == 0:
     st.session_state.chat_history = load_chat_history()
 
-# =====================================================================
-#  🌍 HIGH-ACCURACY REGIONAL TELEMETRY BACKEND FOR INDIA
-# =====================================================================
-
+# --- Integrated Web Tools ---
 def get_live_weather(location_query: str) -> str:
     try:
-        # Enforce Indian geographical priority in the Geocoding endpoint
         clean_location = location_query.strip()
         if "india" not in clean_location.lower():
             clean_location += ", India"
@@ -341,9 +375,8 @@ def get_live_weather(location_query: str) -> str:
         geo_res = requests.get(geo_url, timeout=5).json()
         
         if not geo_res.get("results"): 
-            return f"❌ Telemetry Sync Interrupted: Location mapping failed for '{location_query}'. Ensure the village, city, or state name is correct."
+            return f"❌ Telemetry Sync Interrupted: Location mapping failed for '{location_query}'."
             
-        # Select closest mapping inside Indian territories
         result_node = geo_res["results"][0]
         lat, lon = result_node["latitude"], result_node["longitude"]
         resolved_name = f"{result_node.get('name')}, {result_node.get('admin1', 'India')}"
@@ -353,20 +386,18 @@ def get_live_weather(location_query: str) -> str:
         current = weather_res["current"]
         
         return f"""## 🌍 LIVE METEOROLOGICAL TELEMETRY: {resolved_name.upper()}
-* **Core Temperature:** 180°C if hot core else {current['temperature_2m']}°C
+* **Core Temperature:** {current['temperature_2m']}°C
 * **RealFeel (Apparent Temp):** {current['apparent_temperature']}°C
 * **Relative Humidity Matrix:** {current['relative_humidity_2m']}%
 * **Atmospheric Cloud Cover:** {current['cloud_cover']}%
 * **Precipitation / Rain Gauge:** {current['precipitation']} mm
 * **Wind Velocity Node:** {current['wind_speed_10m']} km/h (Direction: {current['wind_direction_10m']}°)
-* **Surface Pressure Matrix:** {current['surface_pressure']} hPa
-* *Data Timestamp Sync: Real-time via Open-Meteo Arrays*"""
+* **Surface Pressure Matrix:** {current['surface_pressure']} hPa"""
     except Exception as e:
         return f"❌ Weather Sync Failure: {str(e)}"
 
 def get_world_news(regional_query: str) -> str:
     try:
-        # Construct focused search wire targeting Indian regional press layers
         search_topic = regional_query.strip()
         if "india" not in search_topic.lower():
             search_topic += " India"
@@ -379,18 +410,16 @@ def get_world_news(regional_query: str) -> str:
             
         article_news = f"## 📰 DISPATCH: GROUND-LEVEL LOCAL NEWS UPDATE FOR '{regional_query.upper()}'\n\n"
         for idx, entry in enumerate(feed.entries[:4]):
-            clean_title = entry.title.split(" - ")[0]  # Strip publication trailing headers
+            clean_title = entry.title.split(" - ")[0]
             source_agency = entry.source.get('name', 'Indian Press Wire')
-            article_news += f"### Segment {idx+1}: {clean_title}\n* **Press Source:** {source_agency}\n* **Published Timeline:** {entry.published}\n* **Wire Link:** {entry.link}\n\n"
+            article_news += f"### Segment {idx+1}: {clean_title}\n* **Press Source:** {source_agency}\n* **Published Timeline:** {entry.published}\n\n"
         return article_news
     except Exception as e:
         return f"❌ News Core Extraction Interrupted: {str(e)}"
 
-# High-accuracy zero-token live Internet extraction node (DuckDuckGo integration)
 def query_live_search(query: str) -> str:
     try:
         from duckduckgo_search import DDGS
-        # Force local regional constraint for true results
         search_intent = query
         if "india" not in search_intent.lower():
             search_intent += " India"
@@ -431,6 +460,24 @@ with st.sidebar:
 
     cfg_tone = st.selectbox("🎭 Persona Profile", ["Standard Agent", "Expert Professor", "Code Auditor", "Brief Summary Node"])
     
+    # 📝 SUPERVISED LEARNING AGENT TRAINING INTERFACE PANEL
+    st.markdown("---")
+    st.subheader("🎓 Supervised Model Training")
+    with st.expander("Teach & Correct Agent Response", expanded=False):
+        st.caption("Create custom supervised training datasets by correcting errors:")
+        with st.form("supervised_fine_tune_form", clear_on_submit=True):
+            train_prompt = st.text_area("User Query Prompt", placeholder="What was your question?", height=70)
+            train_target = st.text_area("Target Ground Truth Response", placeholder="Type the 100% correct answer here...", height=90)
+            submit_training_node = st.form_submit_button("Log Supervised Training Entry 💾")
+            
+            if submit_training_node and train_prompt and train_target:
+                # Save into an industry standard fine-tuning JSONL sheet architecture
+                dataset_file = "supervised_fine_tuning_dataset.jsonl"
+                structured_json_line = {"messages": [{"role": "system", "content": "You are Offline.Ai"}, {"role": "user", "content": train_prompt}, {"role": "assistant", "content": train_target}]}
+                with open(dataset_file, "a", encoding="utf-8") as jsonl_file:
+                    jsonl_file.write(json.dumps(structured_json_line) + "\n")
+                st.success("✅ Logged entry to 'supervised_fine_tuning_dataset.jsonl'! Ready for model fine-tuning arrays.")
+
     st.markdown("---")
     st.subheader("👥 Project Team Members")
     st.markdown("""
@@ -490,10 +537,25 @@ with st.sidebar:
 st.markdown("<h1 style='font-size: 2.5rem; font-weight: 900; background: linear-gradient(45deg, #4a90e2, #ff7e5f); -webkit-background-clip: text; -webkit-text-fill-color: transparent;'>⚡ Offline Smart Agentic Workspace</h1>", unsafe_allow_html=True)
 st.caption(f"Core Computation Velocity Node: `{st.session_state.speed_telemetry}`")
 
-# Render historical conversation streams inside isolated chat panels
-for message in st.session_state.chat_history:
+# Render historical conversation streams inside isolated chat panels with custom index trackers
+for current_index, message in enumerate(st.session_state.chat_history):
     with st.chat_message(message["role"]):
         st.markdown(f"<div class='chat-card'>{message['content']}</div>", unsafe_allow_html=True)
+        
+        # 🟢 REINFORCEMENT LEARNING INTERFACE: Appends live human preference rewards beneath Assistant responses
+        if message["role"] == "assistant" and current_index > 0:
+            associated_prompt = st.session_state.chat_history[current_index - 1]["content"]
+            st.markdown("<div class='feedback-container'>", unsafe_allow_html=True)
+            col_up, col_down, _ = st.columns([0.8, 0.9, 10.3])
+            with col_up:
+                if st.button("👍", key=f"up_{current_index}"):
+                    save_rl_feedback(associated_prompt, message["content"], 1)
+                    st.toast("Reward parameter updated: +1 (Positive Reinforcement Logged!)")
+            with col_down:
+                if st.button("👎", key=f"down_{current_index}"):
+                    save_rl_feedback(associated_prompt, message["content"], -1)
+                    st.toast("Reward parameter updated: -1 (Negative Reinforcement Logged!)")
+            st.markdown("</div>", unsafe_allow_html=True)
 
 # Quick Access Shortcut Pills
 pill_cols = st.columns(3)
@@ -612,7 +674,6 @@ if st.session_state.active_display:
                 if any(w_word in user_query_lower for w_word in ["weather", "temperature", "temp", "rain", "climate", "humidity"]):
                     if cfg_verbose:
                         log_placeholder.markdown("<div class='log-card'>Thought Trace: Intercepting regional Indian weather request...</div>", unsafe_allow_html=True)
-                    # Extract location intelligently or default safely to Nalhati
                     extracted_loc = "Nalhati, West Bengal"
                     for word in display_user_query.split():
                         clean_w = word.strip("?,.!")
