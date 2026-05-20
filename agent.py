@@ -495,7 +495,7 @@ if final_query:
         elif cfg_tone == "Code Auditor": persona_behavior = "Respond as a senior software engineering auditor."
         elif cfg_tone == "Brief Summary Node": persona_behavior = "Respond as an ultra-compact summary in 3 bullet points."
 
-        #  FIXED RULES OVERRIDE: Tells the model to explicitly ignore history conflict strings
+        #  FIXED ANTI-POISONING DIRECTIVE INSTRUCTION
         rules = f"""You are the premium intelligence layer of 'Offline.Ai', built by Mrinal Gorain from Nalhati Government Polytechnic, CST department.
 Project portfolio documentation was compiled by Prami Hazra and Sanchari Choudhury.
 
@@ -503,7 +503,7 @@ CRITICAL DIRECTIVE INSTRUCTIONS:
 {persona_behavior}
 - Response script channel MUST track the script format parsed within the prompt.
 - Use $inline$ and $$display$$ format maps for complex technical equations.
-- MANDATORY TRUTH MATRIX: You are completely forbidden from looking at past chat histories or cutoff assumptions if they conflict with the fresh text below. Rely 100% on the CONTEXT REFERENCE PACK below to form your answer. 
+- MANDATORY REAL-TIME ANTI-POISONING DIRECTIVE: If the fresh data in the CONTEXT REFERENCE PACK contradicts older chat log messages or pre-trained history records, you MUST completely ignore the historical data. Rely 100% on the context pack text below to output the absolute real-time truth.
 
 CONTEXT REFERENCE PACK (REAL-TIME LIVE DATA RESULTS):
 {web_data}
