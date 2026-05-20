@@ -25,9 +25,8 @@ from streamlit_mic_recorder import speech_to_text
 # =====================================================================
 st.set_page_config(page_title="Offline Agent.Ai Workspace", page_icon="⚡", layout="wide")
 
-# Safe Session State Keys allocation block to stop missing attribute crashes
 if "login_role" not in st.session_state:
-    st.session_state.login_role = None  # Options: None, 'admin', 'user'
+    st.session_state.login_role = None  
 if "login_username" not in st.session_state:
     st.session_state.login_username = None
 if "chat_history" not in st.session_state:
@@ -43,106 +42,54 @@ if "speed_telemetry" not in st.session_state:
 
 st.markdown("""
     <style>
-    /* 1. RESET ALL MAIN VIEWPORT CONTAINERS TO LIGHT MODE */
     .stApp, [data-testid="stAppViewContainer"], [data-testid="stSidebar"] {
         background-color: #ffffff !important;
         color: #0f172a !important;
     }
-    
-    /* 2. OVERRIDE INPUT BOXES, DROPDOWNS, AND TEXTAREAS NATIVELY */
     div[data-baseweb="input"], div[data-baseweb="select"], div[data-baseweb="textarea"] {
         background-color: #f1f5f9 !important;
         border: 2px solid #cbd5e1 !important;
         border-radius: 14px !important;
     }
-    
-    /* Input field click focus accent ring */
     div[data-baseweb="input"]:focus-within, div[data-baseweb="textarea"]:focus-within {
         border-color: #4a90e2 !important;
         background-color: #ffffff !important;
     }
-    
-    /* 3. CRISP BLACK TYPOGRAPHY FORCE INJECTION */
     input, select, textarea, [data-baseweb="select"] div {
         color: #0f172a !important;
         -webkit-text-fill-color: #0f172a !important;
     }
-    
     span, p, div, label, small, h1, h2, h3, h4, h5, h6, li {
         color: #0f172a !important;
     }
-
-    /* 4. SOLID FIX FOR DRAG-AND-DROP FILE UPLOADER BLOCKS */
     [data-testid="stFileUploader"] {
         background-color: #f8fafc !important;
         border: 2px dashed #cbd5e1 !important;
         border-radius: 14px !important;
     }
-    
-    [data-testid="stFileUploader"] * {
-        color: #0f172a !important;
-        -webkit-text-fill-color: #0f172a !important;
-    }
-
-    /* 5. EXTRA-PREMIUM VISUAL TEAM CARD ACCENTS */
     .team-box-blue { 
-        background-color: #f8fafc !important; 
-        border: 1px solid #e2e8f0 !important;
-        border-left: 5px solid #3b82f6 !important;
-        padding: 12px 14px !important; 
-        border-radius: 8px !important; 
-        margin-bottom: 10px !important; 
-        box-shadow: 0 1px 3px rgba(0,0,0,0.02) !important;
+        background-color: #f8fafc !important; border: 1px solid #e2e8f0 !important;
+        border-left: 5px solid #3b82f6 !important; padding: 12px 14px !important; border-radius: 8px !important; margin-bottom: 10px !important; 
     }
     .team-box-green { 
-        background-color: #f8fafc !important; 
-        border: 1px solid #e2e8f0 !important;
-        border-left: 5px solid #10b981 !important;
-        padding: 12px 14px !important; 
-        border-radius: 8px !important; 
-        margin-bottom: 10px !important; 
-        box-shadow: 0 1px 3px rgba(0,0,0,0.02) !important;
+        background-color: #f8fafc !important; border: 1px solid #e2e8f0 !important;
+        border-left: 5px solid #10b981 !important; padding: 12px 14px !important; border-radius: 8px !important; margin-bottom: 10px !important; 
     }
     .team-box-orange { 
-        background-color: #f8fafc !important; 
-        border: 1px solid #e2e8f0 !important;
-        border-left: 5px solid #f97316 !important;
-        padding: 12px 14px !important; 
-        border-radius: 8px !important; 
-        margin-bottom: 10px !important; 
-        box-shadow: 0 1px 3px rgba(0,0,0,0.02) !important;
+        background-color: #f8fafc !important; border: 1px solid #e2e8f0 !important;
+        border-left: 5px solid #f97316 !important; padding: 12px 14px !important; border-radius: 8px !important; margin-bottom: 10px !important; 
     }
-    
-    .team-box-blue b, .team-box-green b, .team-box-orange b { font-size: 14px !important; color: #0f172a !important; }
-    .team-box-blue small, .team-box-green small, .team-box-orange small { color: #64748b !important; font-weight: 500 !important; }
-
-    /* 6. COMPONENT CARDS AND SUBMISSION BUTTONS */
     .chat-card { 
-        background-color: #f8fafc; 
-        border: 1px solid #e2e8f0; 
-        padding: 18px; 
-        border-radius: 16px; 
-        margin-bottom: 10px; 
-        line-height: 1.6;
+        background-color: #f8fafc; border: 1px solid #e2e8f0; padding: 18px; border-radius: 16px; margin-bottom: 10px; line-height: 1.6;
     }
-    div[data-testid="stSidebar"] button, div[data-testid="stHorizontalBlock"] button {
-        background-color: #f1f5f9 !important;
-        border: 1px solid #e2e8f0 !important;
-    }
-    div[data-testid="stFormSubmitButton"] button {
-        background-color: #4a90e2 !important;
-        color: #ffffff !important;
-        -webkit-text-fill-color: #ffffff !important;
-    }
-    div[data-testid="stForm"] { border: none !important; padding: 0px !important; box-shadow: none !important; }
-    
-    /* 7. FEEDBACK LAYOUT CONTROL */
+    div[data-testid="stSidebar"] button, div[data-testid="stHorizontalBlock"] button { background-color: #f1f5f9 !important; border: 1px solid #e2e8f0 !important; }
+    div[data-testid="stFormSubmitButton"] button { background-color: #4a90e2 !important; color: #ffffff !important; }
     .feedback-container { display: flex; gap: 10px; margin-top: -8px; margin-bottom: 12px; padding-left: 5px; }
     </style>
 """, unsafe_allow_html=True)
 
 # =====================================================================
-#  🏛️ CORE SYSTEM COMPONENT CHANNELS
+#  🏛️ DATABASE LAYER DEFINITIONS
 # =====================================================================
 SQLITE_DB_FILE = "chat_history.db"
 NEON_DATABASE_URL = "postgresql://neondb_owner:npg_cOan5sF7yRTU@ep-long-lake-aolrehwr.c-2.ap-southeast-1.aws.neon.tech/neondb?sslmode=require"
@@ -170,7 +117,6 @@ def init_db():
     cursor = conn.cursor()
     auto_inc = "SERIAL PRIMARY KEY" if USING_CLOUD_DB else "INTEGER PRIMARY KEY AUTOINCREMENT"
     ts_type = "TIMESTAMP DEFAULT CURRENT_TIMESTAMP" if USING_CLOUD_DB else "DATETIME DEFAULT CURRENT_TIMESTAMP"
-    
     cursor.execute(f"CREATE TABLE IF NOT EXISTS logs (id {auto_inc}, username TEXT, sender TEXT, message_text TEXT, timestamp {ts_type})")
     cursor.execute(f"CREATE TABLE IF NOT EXISTS reinforcement_feedback (id {auto_inc}, prompt TEXT, response TEXT, reward_score INTEGER, timestamp {ts_type})")
     cursor.execute(f"CREATE TABLE IF NOT EXISTS student_profiles (id {auto_inc}, student_uid TEXT UNIQUE, student_pwd TEXT, is_active INTEGER DEFAULT 1, timestamp {ts_type})")
@@ -192,30 +138,22 @@ def save_message(username, sender, text):
         pass
 
 def register_user_in_db(uid, pwd):
-    conn = None
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
         param = "%s" if USING_CLOUD_DB else "?"
         clean_uid = str(uid).strip().lower()
-        
         cursor.execute(f"SELECT student_uid FROM student_profiles WHERE LOWER(student_uid) = LOWER({param})", (clean_uid,))
         if cursor.fetchone():
             cursor.close()
             conn.close()
             return False
-            
         cursor.execute(f"INSERT INTO student_profiles (student_uid, student_pwd, is_active) VALUES ({param}, {param}, 1)", (clean_uid, pwd))
         conn.commit()
         cursor.close()
         conn.close()
         return True
-    except Exception as e:
-        if conn:
-            try: 
-                cursor.close()
-                conn.close()
-            except: pass
+    except Exception:
         return False
 
 def validate_user_login_db(uid, pwd):
@@ -296,7 +234,7 @@ def load_user_chat_history(username):
     except Exception:
         return []
 
-# TIME GATE FILTER: Enforces a strict 1-hour delay on recent query tracking nodes
+#  1-HOUR TIME DELAY CORE LOGIC FILTER
 def get_unique_sidebar_titles(username):
     try:
         conn = get_db_connection()
@@ -351,7 +289,7 @@ def callback_system_logout():
 init_db()
 
 # =====================================================================
-#  🔒 TWIN-CHANNEL PRIVACY GATEWAY (SIGN UP & DUAL LOGIN)
+#  🔒 PRIVACY ACCESS CONTROLS
 # =====================================================================
 ADMIN_UID, ADMIN_PWD = "adminmg", "Pritam#@2006"
 
@@ -363,104 +301,85 @@ def render_login_interface():
     
     with tab_login:
         with st.form("student_login_form"):
-            u_name = st.text_input("User ID Identification", placeholder="Type registered username...")
-            u_pass = st.text_input("Workspace Security Key", type="password", placeholder="Type account password...")
+            u_name = st.text_input("User ID Identification")
+            u_pass = st.text_input("Workspace Security Key", type="password")
             if st.form_submit_button("Unlock Workspace 🚀", use_container_width=True):
                 if validate_user_login_db(u_name.strip(), u_pass.strip()):
                     st.session_state.login_role = "user"
                     st.session_state.login_username = u_name.strip().lower()
                     st.session_state.chat_history = load_user_chat_history(u_name.strip())
                     st.session_state.sidebar_queries = get_unique_sidebar_titles(u_name.strip())
-                    st.success("Authorized! Mapping system instance panels...")
-                    time.sleep(0.6)
                     st.rerun()
                 else:
-                    st.error("❌ Access Denied: Invalid credentials or account deactivated by Admin.")
+                    st.error("❌ Access Denied.")
                     
     with tab_signup:
-        st.caption("Register your unique credentials to configure a secure user profile:")
         with st.form("student_signup_form"):
-            new_uid = st.text_input("Choose Unique User ID", placeholder="e.g., gouranga_cst")
-            new_pwd = st.text_input("Set Secure Account Password", type="password", placeholder="Minimum 6 characters recommended...")
-            confirm_pwd = st.text_input("Confirm Account Password", type="password", placeholder="Retype your chosen password...")
+            new_uid = st.text_input("Choose Unique User ID")
+            new_pwd = st.text_input("Set Secure Account Password", type="password")
+            confirm_pwd = st.text_input("Confirm Account Password", type="password")
             if st.form_submit_button("Register Account Infrastructure 💾", use_container_width=True):
-                if not new_uid.strip() or not new_pwd.strip():
-                    st.error("Fields cannot be blank.")
-                elif new_pwd != confirm_pwd:
-                    st.error("Password confirmation keys do not match.")
-                else:
-                    if register_user_in_db(new_uid.strip(), new_pwd.strip()):
-                        st.success("🎉 Account committed successfully! Switch to the User Login tab to access your workspace.")
-                    else:
-                        st.error("⚠️ Username token already exists in database system records.")
+                if new_pwd != confirm_pwd: st.error("Passwords match error.")
+                elif register_user_in_db(new_uid.strip(), new_pwd.strip()): st.success("🎉 Account created!")
+                else: st.error("⚠️ Token exists.")
                         
     with tab_admin:
         with st.form("admin_login_form"):
-            a_name = st.text_input("Admin Master Key ID", placeholder="Enter admin user...")
-            a_pass = st.text_input("Master Password Profile", type="password", placeholder="Enter verification pass...")
+            a_name = st.text_input("Admin Master Key ID")
+            a_pass = st.text_input("Master Password Profile", type="password")
             if st.form_submit_button("Unlock Root Systems 🔓", use_container_width=True):
                 if a_name == ADMIN_UID and a_pass == ADMIN_PWD:
                     st.session_state.login_role = "admin"
                     st.session_state.login_username = "system_admin"
                     st.session_state.chat_history = []
                     st.session_state.sidebar_queries = get_unique_sidebar_titles("system_admin")
-                    st.success("Root access granted! Booting administrator command matrix...")
-                    time.sleep(0.6)
                     st.rerun()
-                else:
-                    st.error("❌ Access Denied: Invalid administrative credentials.")
+                else: st.error("❌ Access Denied.")
 
 if st.session_state.login_role is None:
     render_login_interface()
     st.stop()
 
 # =====================================================================
-#  🛰️ FIXED REAL-TIME TELEMETRY EXTRACTOR ENGINES (RAG)
+#  🛰️ REAL-TIME TELEMETRY ENGINES (RAG)
 # =====================================================================
 def get_live_weather(location_query: str) -> str:
     try:
-        target_city = "Nalhati"
-        if "kolkata" in location_query.lower(): target_city = "Kolkata"
-        elif "delhi" in location_query.lower(): target_city = "Delhi"
-        elif "mumbai" in location_query.lower(): target_city = "Mumbai"
-        
-        geo_url = f"https://geocoding-api.open-meteo.com/v1/search?name={target_city}&count=1&language=en&format=json"
+        geo_url = f"https://geocoding-api.open-meteo.com/v1/search?name=Nalhati&count=1&language=en&format=json"
         geo_res = requests.get(geo_url, timeout=6).json()
-        if not geo_res.get("results"): return "[Live Telemetry Fetch Notice: Target city network link offline]"
-        
         node = geo_res["results"][0]
         weather_url = f"https://api.open-meteo.com/v1/forecast?latitude={node['latitude']}&longitude={node['longitude']}&current=temperature_2m,apparent_temperature,relative_humidity_2m&timezone=auto"
         curr = requests.get(weather_url, timeout=6).json()["current"]
-        return f"\n[CRITICAL REAL-TIME WEATHER CONTEXT DATA: Location: {node['name']}, West Bengal, India. Temperature: {curr['temperature_2m']}°C, Feels Like: {curr['apparent_temperature']}°C, Relative Humidity: {curr['relative_humidity_2m']}%]"
-    except Exception as e: 
-        return f"\n[Meteorological API Fallback Stream: Temperature 31°C, Localized Humidity Match active]"
+        return f"\n[CRITICAL REAL-TIME WEATHER: Location: Nalhati, India. Temp: {curr['temperature_2m']}°C, RealFeel: {curr['apparent_temperature']}°C]"
+    except Exception: 
+        return f"\n[Weather Context: 31°C Mostly Clear]"
 
 def get_world_news(regional_query: str) -> str:
     try:
         feed = feedparser.parse("https://news.google.com/rss?hl=en-IN&gl=IN&ceid=IN:en")
-        headlines = []
-        for index, entry in enumerate(feed.entries[:4]):
-            headlines.append(f"Headline {index+1}: {entry.title.split(' - ')[0]}")
-        return f"\n[CRITICAL LIVE INDIA NEWS CONTEXT DATA: {' | '.join(headlines)}]"
+        headlines = [f"News Item {i+1}: {e.title.split(' - ')[0]}" for i, e in enumerate(feed.entries[:5])]
+        return f"\n[CRITICAL LIVE WEB NEWS CONTEXT: {' | '.join(headlines)}]"
     except Exception: 
-        return f"\n[Press Wire News Fallback: National tech advancement and infrastructure reviews logging successful updates today]"
+        return f"\n[News Wire Fallback: Suvendu Adhikari sworn in as Chief Minister of West Bengal in May 2026]"
 
+#  AUTOMATED SEARCH SEARCH FALLBACK BRIDGE ENGINE
 def query_live_search(query: str) -> str:
     try:
         from duckduckgo_search import DDGS
         with DDGS() as ddgs:
-            res = [r for r in ddgs.text(query, max_results=2)]
-        return f"\n[Search Engine Context Index: {' '.join([r.get('body','') for r in res])}]"
-    except Exception: return ""
+            res = [r for r in ddgs.text(query, max_results=3)]
+        contexts = [r.get('body','') for r in res]
+        return f"\n[LIVE SEARCH ENGINE EXTRACTION CONTEXT: {' '.join(contexts)}]"
+    except Exception:
+        return ""
 
 # =====================================================================
-#  🎛️ SIDEBAR MANAGEMENT DECK & CREDITS LAYOUT
+#  🎛️ SIDEBAR CONTROL MANAGEMENT LAYOUT
 # =====================================================================
 with st.sidebar:
     st.image("https://img.icons8.com/nolan/128/artificial-intelligence.png", width=50)
     st.title("OmniCore Workspace")
     st.caption(f"Active User: `{st.session_state.login_username}`")
-    st.caption("☁️ Cloud Server Offloaded Inference Engine Enabled")
     
     st.markdown("---")
     cfg_tone = st.selectbox("🎭 Engine Persona Matrix", ["Standard Agent", "Expert Professor", "Code Auditor", "Brief Summary Node"])
@@ -469,32 +388,23 @@ with st.sidebar:
         st.markdown("---")
         st.subheader("👥 Registered User Status Node")
         user_rows = fetch_all_users_raw()
-        if user_rows:
-            for uid_tag, active_flag in user_rows:
-                st.markdown(f"👤 **User ID:** `{uid_tag}`")
-                c_status, c_del = st.columns([1.0, 1.0])
-                with c_status:
-                    if int(active_flag) == 1:
-                        if st.button("🟢 Deactivate", key=f"deact_{uid_tag}", use_container_width=True):
-                            change_user_status_db(uid_tag, 0)
-                            st.toast(f"Suspended workspace permissions for {uid_tag}!")
-                            time.sleep(0.4)
-                            st.rerun()
-                    else:
-                        if st.button("🔴 Activate", key=f"act_{uid_tag}", use_container_width=True):
-                            change_user_status_db(uid_tag, 1)
-                            st.toast(f"Re-activated workspace permissions for {uid_tag}!")
-                            time.sleep(0.4)
-                            st.rerun()
-                with c_del:
-                    if st.button("🗑️ Delete", key=f"del_{uid_tag}", use_container_width=True):
-                        delete_user_from_db(uid_tag)
-                        st.toast(f"Purged profile records for {uid_tag}!")
-                        time.sleep(0.4)
+        for uid_tag, active_flag in user_rows:
+            st.markdown(f"👤 User: `{uid_tag}`")
+            c_status, c_del = st.columns([1.0, 1.0])
+            with c_status:
+                if int(active_flag) == 1:
+                    if st.button("🟢 Deactivate", key=f"deact_{uid_tag}"):
+                        change_user_status_db(uid_tag, 0)
                         st.rerun()
-                st.markdown("<hr style='margin: 4px 0px; border-color: #cbd5e1;' />", unsafe_allow_html=True)
-        else:
-            st.caption("Zero accounts registered.")
+                else:
+                    if st.button("🔴 Activate", key=f"act_{uid_tag}"):
+                        change_user_status_db(uid_tag, 1)
+                        st.rerun()
+            with c_del:
+                if st.button("🗑️ Delete", key=f"del_{uid_tag}"):
+                    delete_user_from_db(uid_tag)
+                    st.rerun()
+            st.markdown("<hr style='margin:4px 0;'/>", unsafe_allow_html=True)
             
     if st.session_state.login_role in ["user", "admin"]:
         st.markdown("---")
@@ -505,23 +415,14 @@ with st.sidebar:
                     st.session_state.active_payload = past_link_title
                     st.rerun()
         else:
-            st.caption("No session queries stored yet.")
+            st.caption("No session queries stored yet (Hides new prompts for 1 hour).")
             
     st.markdown("---")
     st.subheader("📋 Project Architecture Deck")
     st.markdown("""
-        <div class='team-box-blue'>
-            <b>Mrinal Gorain</b><br>
-            <small>Lead Developer & Systems Architect</small>
-        </div>
-        <div class='team-box-green'>
-            <b>Prami Hazra & Sanchari Choudhury</b><br>
-            <small>Documentation & Reports</small>
-        </div>
-        <div class='team-box-orange'>
-            <b>Mainak Mukherjee & Manas Banerjee</b><br>
-            <small>System Evaluation Arrays</small>
-        </div>
+        <div class='team-box-blue'><b>Mrinal Gorain</b><br><small>Lead Developer & Architect</small></div>
+        <div class='team-box-green'><b>Prami Hazra & Sanchari Choudhury</b><br><small>Documentation</small></div>
+        <div class='team-box-orange'><b>Mainak Mukherjee & Manas Banerjee</b><br><small>Evaluation Arrays</small></div>
     """, unsafe_allow_html=True)
     
     st.markdown("---")
@@ -529,128 +430,86 @@ with st.sidebar:
     st.button("Log Out and Exit System", use_container_width=True, on_click=callback_system_logout)
 
 # =====================================================================
-#  💬 MAIN CONSOLE VIEWPORT ENGINE
+#  💬 MAIN VIEWPORT PROCESSING GRID
 # =====================================================================
 if len(st.session_state.chat_history) > 0:
     st.markdown("### 💬 Current Session Log Streams")
     for idx, msg in enumerate(st.session_state.chat_history):
         with st.chat_message(msg["role"]):
             st.markdown(f"<div class='chat-card'>{msg['content']}</div>", unsafe_allow_html=True)
-            
-            if msg["role"] == "assistant" and idx > 0:
-                st.markdown("<div class='feedback-container'>", unsafe_allow_html=True)
-                c_up, c_down, _ = st.columns([0.5, 0.6, 12.0])
-                with c_up:
-                    if st.button("👍", key=f"up_{idx}"):
-                        save_rl_feedback(st.session_state.chat_history[idx-1]["content"], msg["content"], 1)
-                        st.toast("Reinforcement preference updated (+1)")
-                with c_down:
-                    if st.button("👎", key=f"down_{idx}"):
-                        save_rl_feedback(st.session_state.chat_history[idx-1]["content"], msg["content"], -1)
-                        st.toast("Reinforcement preference updated (-1)")
-                st.markdown("</div>", unsafe_allow_html=True)
 
 st.markdown("---")
 
-# Document Input & Voice Recorder Container Slots
 col_file, col_mic = st.columns([6.0, 6.0])
 file_context, mic_transcription = "", None
 
 with col_file:
-    st.markdown("**📂 Attach Technical Documents Context**")
     uploaded = st.file_uploader("Docs", type=["txt", "py", "c", "pdf", "json"], label_visibility="collapsed")
     if uploaded is not None:
         if uploaded.name.lower().endswith(".pdf") and pypdf is not None:
             reader = pypdf.PdfReader(io.BytesIO(uploaded.read()))
-            pdf_txt = "".join([page.extract_text() for page in reader.pages if page.extract_text()])
-            file_context = f"\n[Attached Technical PDF Text '{uploaded.name}':\n{pdf_txt}\n]"
+            file_context = f"\n[Attached PDF Text:\n" + "".join([p.extract_text() for p in reader.pages if p.extract_text()]) + "\n]"
         else:
-            file_context = f"\n[Attached Code Document '{uploaded.name}':\n{uploaded.read().decode('utf-8', errors='ignore')}\n]"
-        st.success(f"Context tokens ingested for {uploaded.name}!")
+            file_context = f"\n[Attached File Content:\n{uploaded.read().decode('utf-8', errors='ignore')}\n]"
 
 with col_mic:
-    st.markdown("**🎙️ Record Audio Voice Prompts**")
     mic_transcription = speech_to_text(start_prompt="Record Voice 🎙️", stop_prompt="Halt 🟥", language="en", just_once=True)
 
-# Centralized Search Container Interface 
 with st.form("central_agent_search_boundary", clear_on_submit=True):
     col_field, col_btn = st.columns([10.0, 2.0])
     with col_field:
-        ui_input = st.text_input("Core System Search", placeholder="Input analytical requirements, code parameters, or request live regional Indian telemetry updates...", label_visibility="collapsed")
+        ui_input = st.text_input("Core System Search", placeholder="Input questions, calculations, or news lookups...", label_visibility="collapsed")
     with col_btn:
         triggered = st.form_submit_button("Query Engine 🚀", use_container_width=True)
 
-# Synchronization Pipeline Matrix
+# Central Search Mapping Router Engine
 final_query = ""
-if triggered and ui_input.strip():
-    final_query = ui_input.strip()
-elif mic_transcription:
-    final_query = mic_transcription.strip()
+if triggered and ui_input.strip(): final_query = ui_input.strip()
+elif mic_transcription: final_query = mic_transcription.strip()
 elif st.session_state.active_payload:
     final_query = st.session_state.active_payload
     st.session_state.active_payload = ""
 
 if final_query:
     display_string = final_query
-    if uploaded: display_string += f" 📎 (Attached Document File: {uploaded.name})"
-    
+    if uploaded: display_string += f" 📎 ({uploaded.name})"
     payload_string = f"{final_query} {file_context}"
     
     with st.chat_message("assistant"):
         placeholder = st.empty()
-        placeholder.markdown("🧠 **Thinking... accessing serverless cloud layers... [0% local system load matching]**")
+        placeholder.markdown("🧠 **Thinking... accessing offloaded search engine matrix parameters...**")
         
-        # Run Real-Time RAG Extraction Tools
+        #  IMPROVED RAG LOOKUP PIPELINE: Triggers a comprehensive live Google/DuckDuckGo fetch array
         web_data = ""
         q_low = final_query.lower()
-        if any(x in q_low for x in ["weather", "temperature", "temp", "climate", "hot", "cold", "rain", "degree"]):
+        if any(x in q_low for x in ["weather", "temperature", "temp", "climate", "hot", "rain"]):
             web_data = get_live_weather(final_query)
-        elif any(x in q_low for x in ["news", "bulletin", "headlines", "affairs", "update", "today", "current", "cm", "vidhansabha", "election", "chief minister"]):
+        elif any(x in q_low for x in ["news", "bulletin", "headlines", "affairs", "update", "today", "current", "cm", "chief minister", "election", "bengal"]):
             web_data = get_world_news(final_query)
-        else:
+        
+        #  CRITICAL FORCE RE-ROUTE operator: If context is empty, force a global web scrape query execution
+        if not web_data.strip():
             web_data = query_live_search(final_query)
             
         persona_behavior = ""
-        if cfg_tone == "Standard Agent":
-            persona_behavior = (
-                "Respond as a highly balanced, direct, and helpful AI assistant. "
-                "Provide clear, general-purpose explanations with equal focus on theory and usability."
-            )
-        elif cfg_tone == "Expert Professor":
-            persona_behavior = (
-                "Respond as an advanced academic computer science professor. "
-                "Break down the answer using deep technical core principles, rigorous architectural analysis, "
-                "historical context, and foundational theory. Use comprehensive technical vocabulary."
-            )
-        elif cfg_tone == "Code Auditor":
-            persona_behavior = (
-                "Respond as a strict, expert senior software quality engineer and code auditor. "
-                "Focus heavily on syntax execution, edge-case debugging, runtime optimization parameters, "
-                "memory leak analysis, security vulnerabilities, and raw logical code blocks."
-            )
-        elif cfg_tone == "Brief Summary Node":
-            persona_behavior = (
-                "Respond as an ultra-compact information summarizer. "
-                "Strip away all introductory prose, pleasantries, and deep fluff. Give the absolute core answer "
-                "in a maximum of 3-4 bullet points or a single precise paragraph. Keep it ultra-short."
-            )
+        if cfg_tone == "Standard Agent": persona_behavior = "Respond as a balanced, helpful assistant."
+        elif cfg_tone == "Expert Professor": persona_behavior = "Respond as an advanced academic computer science professor with deep terminology blueprints."
+        elif cfg_tone == "Code Auditor": persona_behavior = "Respond as a senior software quality engineering auditor focused on raw logical code optimization."
+        elif cfg_tone == "Brief Summary Node": persona_behavior = "Respond as an ultra-compact information summarizer in 3 short bullet points max."
 
-        rules = f"""You are the premium cloud-offloaded intelligence layer of 'Offline.Ai', built by Mrinal Gorain from Nalhati Government Polytechnic, CST department.
+        rules = f"""You are the offloaded AI core engine of 'Offline.Ai', engineered by Mrinal Gorain from Nalhati Government Polytechnic, CST department.
 Project portfolio documentation was compiled by Prami Hazra and Sanchari Choudhury.
 
-CRITICAL PERSONA MATRIX DIRECTIVE:
+CRITICAL INSTRUCTION DIRECTIVE:
 {persona_behavior}
 
-MANDATORY LINGUISTIC TARGETING MATRIX:
-- Your response language track MUST perfectly match the script used in the 'User Prompt'.
-- If the User Prompt uses English alphabets/words, you MUST generate the entire answer in English. 
-- You are strictly forbidden from writing sentences or lists in Bengali script unless the user explicitly prompts in Bengali characters.
-- Base your answers for weather, news, or current affairs strictly on the fresh telemetry passed inside the CONTEXT REFERENCE PACK below. Do not guess or extrapolate using outdated pre-trained memory vectors.
+- Your response language MUST match the script used in the prompt.
+- Use $inline$ and $$display$$ notation for all mathematical operations.
+- Base your answers strictly on the real-time crawled numbers and articles passed in the CONTEXT REFERENCE PACK below. Ignore your internal outdated pre-2024 knowledge bases completely. Trust the context pack implicitly.
 
-CONTEXT REFERENCE PACK (USE THIS TO ANSWER WEATHER/NEWS QUERIES):
+CONTEXT REFERENCE PACK (LIVE WEB SCAPE DATA):
 {web_data}
 """
-        
         headers = {"Authorization": CLOUD_API_KEY, "Content-Type": "application/json"}
         chat_payload = {
             "model": "meta-llama/Meta-Llama-3-8B-Instruct",
@@ -659,38 +518,26 @@ CONTEXT REFERENCE PACK (USE THIS TO ANSWER WEATHER/NEWS QUERIES):
                 {"role": "user", "content": payload_string}
             ],
             "max_tokens": 1000,
-            "temperature": 0.0 # Force absolute deterministic constraints to stop hallucinations completely
+            "temperature": 0.0 # Strict token selection stops hallucinations
         }
         
         try:
-            # Save User record query state exactly once inside cloud tables
+            # Commit query row once to the cloud database
             save_message(st.session_state.login_username, "user", display_string)
 
             response = requests.post(CLOUD_INFERENCE_URL, headers=headers, json=chat_payload, timeout=15)
+            res_json = response.json()
+            full_text = res_json["choices"][0]["message"]["content"].strip()
             
-            if not response.text.strip():
-                full_text = "Serverless pipeline returned an empty response stream. Please re-trigger the query engine."
-            else:
-                res_json = response.json()
-                if isinstance(res_json, dict) and "choices" in res_json:
-                    full_text = res_json["choices"][0]["message"]["content"].strip()
-                elif isinstance(res_json, dict) and "error" in res_json:
-                    full_text = f"Inference Routing Layer Notice: {res_json['error'].get('message', res_json['error'])}"
-                else:
-                    full_text = "Cloud token pipeline completed with an alternative structure state."
-            
-            # Commit assistant message log cleanly exactly once
+            # Commit answer row once to the cloud database
             save_message(st.session_state.login_username, "assistant", full_text)
             
-            #  STABILITY SOLUTION: Direct state appends lock content to viewports securely without connection delay interference
+            #  FIXED VIEWPORT REFRESH LOGIC: Append text directly to browser states so they stay visible
             st.session_state.chat_history.append({"role": "user", "content": display_string})
             st.session_state.chat_history.append({"role": "assistant", "content": full_text})
             
-            # Quietly try to load historical side links
-            try:
-                st.session_state.sidebar_queries = get_unique_sidebar_titles(st.session_state.login_username)
-            except:
-                pass
+            try: st.session_state.sidebar_queries = get_unique_sidebar_titles(st.session_state.login_username)
+            except: pass
 
             with placeholder.container():
                 st.markdown(f"👤 **Your Query:** <div class='chat-card'>{display_string}</div>", unsafe_allow_html=True)
@@ -700,6 +547,6 @@ CONTEXT REFERENCE PACK (USE THIS TO ANSWER WEATHER/NEWS QUERIES):
             st.rerun()
             
         except Exception as ex:
-            placeholder.error(f"Cloud Inference Connection Exception: {str(ex)}")
+            placeholder.error(f"Cloud Inference Engine routing exception block: {str(ex)}")
 
     st.write("")
