@@ -546,11 +546,5 @@ CONTEXT REFERENCE PACK:
         except Exception as ex:
             placeholder.error(f"Cloud Inference Connection Exception: {str(ex)}")
                 
-    # Smooth Automated Screen Viewport Scrolling Core Script Layer
-    st.components.v1.html("""
-        <script>
-            var viewport = window.parent.document.querySelector('.main');
-            if (viewport) { viewport.scrollTo({ top: viewport.scrollHeight, behavior: 'smooth' }); }
-        </script>
-    """, height=0)
-    st.rerun()
+    #  REPLACE WITH THIS CLEAN FINISHED APP RE-RENDER LAYER
+    st.write("")  # Flushes buffer cleanly
