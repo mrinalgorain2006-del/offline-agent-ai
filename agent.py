@@ -89,7 +89,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # =====================================================================
-#  🏛️ DATABASE LAYER DEFINITIONS
+#  🏛️ DATABASE INFRASTRUCTURE METHODS
 # =====================================================================
 SQLITE_DB_FILE = "chat_history.db"
 NEON_DATABASE_URL = "postgresql://neondb_owner:npg_cOan5sF7yRTU@ep-long-lake-aolrehwr.c-2.ap-southeast-1.aws.neon.tech/neondb?sslmode=require"
@@ -234,7 +234,6 @@ def load_user_chat_history(username):
     except Exception:
         return []
 
-#  1-HOUR TIME DELAY CORE LOGIC FILTER
 def get_unique_sidebar_titles(username):
     try:
         conn = get_db_connection()
@@ -289,7 +288,7 @@ def callback_system_logout():
 init_db()
 
 # =====================================================================
-#  🔒 PRIVACY ACCESS CONTROLS
+#  🔒 PRIVACY INTERFACE
 # =====================================================================
 ADMIN_UID, ADMIN_PWD = "adminmg", "Pritam#@2006"
 
@@ -310,8 +309,7 @@ def render_login_interface():
                     st.session_state.chat_history = load_user_chat_history(u_name.strip())
                     st.session_state.sidebar_queries = get_unique_sidebar_titles(u_name.strip())
                     st.rerun()
-                else:
-                    st.error("❌ Access Denied.")
+                else: st.error("❌ Access Denied.")
                     
     with tab_signup:
         with st.form("student_signup_form"):
@@ -341,7 +339,7 @@ if st.session_state.login_role is None:
     st.stop()
 
 # =====================================================================
-#  🛰️ REAL-TIME TELEMETRY ENGINES (RAG)
+#  🛰️ TELEMETRY CRAWLER CHANNELS (RAG MATRIX)
 # =====================================================================
 def get_live_weather(location_query: str) -> str:
     try:
@@ -362,7 +360,6 @@ def get_world_news(regional_query: str) -> str:
     except Exception: 
         return f"\n[News Wire Fallback: Suvendu Adhikari sworn in as Chief Minister of West Bengal in May 2026]"
 
-#  AUTOMATED SEARCH SEARCH FALLBACK BRIDGE ENGINE
 def query_live_search(query: str) -> str:
     try:
         from duckduckgo_search import DDGS
@@ -374,7 +371,7 @@ def query_live_search(query: str) -> str:
         return ""
 
 # =====================================================================
-#  🎛️ SIDEBAR CONTROL MANAGEMENT LAYOUT
+#  🎛️ SIDEBAR CONTROL DECK Layout
 # =====================================================================
 with st.sidebar:
     st.image("https://img.icons8.com/nolan/128/artificial-intelligence.png", width=50)
@@ -430,7 +427,7 @@ with st.sidebar:
     st.button("Log Out and Exit System", use_container_width=True, on_click=callback_system_logout)
 
 # =====================================================================
-#  💬 MAIN VIEWPORT PROCESSING GRID
+#  💬 MAIN RECONNAISSANCE GRID
 # =====================================================================
 if len(st.session_state.chat_history) > 0:
     st.markdown("### 💬 Current Session Log Streams")
@@ -462,7 +459,7 @@ with st.form("central_agent_search_boundary", clear_on_submit=True):
     with col_btn:
         triggered = st.form_submit_button("Query Engine 🚀", use_container_width=True)
 
-# Central Search Mapping Router Engine
+# Processing synchronization pipelines
 final_query = ""
 if triggered and ui_input.strip(): final_query = ui_input.strip()
 elif mic_transcription: final_query = mic_transcription.strip()
@@ -477,9 +474,9 @@ if final_query:
     
     with st.chat_message("assistant"):
         placeholder = st.empty()
-        placeholder.markdown("🧠 **Thinking... accessing offloaded search engine matrix parameters...**")
+        placeholder.markdown("🧠 **Thinking... accessing serverless cloud layers...**")
         
-        #  IMPROVED RAG LOOKUP PIPELINE: Triggers a comprehensive live Google/DuckDuckGo fetch array
+        #  FIXED RAG MATRICES: Comprehensive live lookup execution paths
         web_data = ""
         q_low = final_query.lower()
         if any(x in q_low for x in ["weather", "temperature", "temp", "climate", "hot", "rain"]):
@@ -487,27 +484,27 @@ if final_query:
         elif any(x in q_low for x in ["news", "bulletin", "headlines", "affairs", "update", "today", "current", "cm", "chief minister", "election", "bengal"]):
             web_data = get_world_news(final_query)
         
-        #  CRITICAL FORCE RE-ROUTE operator: If context is empty, force a global web scrape query execution
-        if not web_data.strip():
+        #  CRITICAL RE-ROUTE CORE ENGINE: Force a comprehensive live lookup if news parsing parameters trigger empty flags
+        if not web_data.strip() or any(x in q_low for x in ["who", "what", "is", "now", "present"]):
             web_data = query_live_search(final_query)
             
         persona_behavior = ""
         if cfg_tone == "Standard Agent": persona_behavior = "Respond as a balanced, helpful assistant."
-        elif cfg_tone == "Expert Professor": persona_behavior = "Respond as an advanced academic computer science professor with deep terminology blueprints."
-        elif cfg_tone == "Code Auditor": persona_behavior = "Respond as a senior software quality engineering auditor focused on raw logical code optimization."
-        elif cfg_tone == "Brief Summary Node": persona_behavior = "Respond as an ultra-compact information summarizer in 3 short bullet points max."
+        elif cfg_tone == "Expert Professor": persona_behavior = "Respond as an advanced academic computer science professor."
+        elif cfg_tone == "Code Auditor": persona_behavior = "Respond as a senior software engineering auditor."
+        elif cfg_tone == "Brief Summary Node": persona_behavior = "Respond as an ultra-compact information summarizer in 3 bullet points."
 
-        rules = f"""You are the offloaded AI core engine of 'Offline.Ai', engineered by Mrinal Gorain from Nalhati Government Polytechnic, CST department.
+        rules = f"""You are the premium intelligence layer of 'Offline.Ai', built by Mrinal Gorain from Nalhati Government Polytechnic, CST department.
 Project portfolio documentation was compiled by Prami Hazra and Sanchari Choudhury.
 
-CRITICAL INSTRUCTION DIRECTIVE:
+CRITICAL DIRECTIVE INSTRUCTIONS:
 {persona_behavior}
 
-- Your response language MUST match the script used in the prompt.
-- Use $inline$ and $$display$$ notation for all mathematical operations.
-- Base your answers strictly on the real-time crawled numbers and articles passed in the CONTEXT REFERENCE PACK below. Ignore your internal outdated pre-2024 knowledge bases completely. Trust the context pack implicitly.
+- Response script channel MUST track the script format parsed within the prompt.
+- Use $inline$ and $$display$$ format maps for complex technical equations.
+- Base your answers strictly on the crawling data injected in the CONTEXT REFERENCE PACK below. Trust this context pack implicitly and ignore your internal outdated pre-2024 cutoff limitations completely.
 
-CONTEXT REFERENCE PACK (LIVE WEB SCAPE DATA):
+CONTEXT REFERENCE PACK (REAL-TIME LIVE DATA RESULTS):
 {web_data}
 """
         headers = {"Authorization": CLOUD_API_KEY, "Content-Type": "application/json"}
@@ -518,21 +515,19 @@ CONTEXT REFERENCE PACK (LIVE WEB SCAPE DATA):
                 {"role": "user", "content": payload_string}
             ],
             "max_tokens": 1000,
-            "temperature": 0.0 # Strict token selection stops hallucinations
+            "temperature": 0.0 
         }
         
         try:
-            # Commit query row once to the cloud database
             save_message(st.session_state.login_username, "user", display_string)
 
             response = requests.post(CLOUD_INFERENCE_URL, headers=headers, json=chat_payload, timeout=15)
             res_json = response.json()
             full_text = res_json["choices"][0]["message"]["content"].strip()
             
-            # Commit answer row once to the cloud database
             save_message(st.session_state.login_username, "assistant", full_text)
             
-            #  FIXED VIEWPORT REFRESH LOGIC: Append text directly to browser states so they stay visible
+            # Local viewport array locking mechanism prevents text disappearance bugs
             st.session_state.chat_history.append({"role": "user", "content": display_string})
             st.session_state.chat_history.append({"role": "assistant", "content": full_text})
             
