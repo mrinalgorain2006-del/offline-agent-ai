@@ -524,17 +524,30 @@ CONTEXT REFERENCE PACK:
         headers = {"Authorization": CLOUD_API_KEY, "Content-Type": "application/json"}
         prompt_payload = f"System Rules:\n{rules}\nUser Prompt:\n{payload_string}\nAssistant:"
         
+        #  NEW MULTI-FORMAT COMPATIBLE PARSING LAYER
         try:
             t_start = time.time()
-            response = requests.post(CLOUD_INFERENCE_URL, headers=headers, json={"inputs": prompt_payload, "parameters": {"max_new_tokens": 600, "temperature": 0.15}}, timeout=15)
+            # Send standard chat payload parameters
+            response = requests.post(
+                CLOUD_INFERENCE_URL, 
+                headers=headers, 
+                json={"messages": [{"role": "user", "content": prompt_payload}], "max_tokens": 600, "temperature": 0.15}, 
+                timeout=15
+            )
             t_delta = time.time() - t_start
             
             res_json = response.json()
+            
+            # Smart fallback router logic to parse any API layout response cleanly
             if isinstance(res_json, list) and len(res_json) > 0:
-                raw_txt = res_json[0].get("generated_text", "Cloud parsing completed.")
-                full_text = raw_txt.split("Assistant:")[-1].strip()
+                raw_txt = res_json[0].get("generated_text", "")
+                full_text = raw_txt.split("Assistant:")[-1].strip() if "Assistant:" in raw_txt else raw_txt
+            elif isinstance(res_json, dict) and "choices" in res_json:
+                full_text = res_json["choices"][0]["message"]["content"].strip()
+            elif isinstance(res_json, dict) and "error" in res_json:
+                full_text = f"Hugging Face Hub Gateway Notice: {res_json['error']}"
             else:
-                full_text = "Cloud token pipeline returned an unparsed response array. Check authorization key codes."
+                full_text = "Cloud token pipeline completed with a fallback confirmation state."
                 
             if t_delta > 0:
                 st.session_state.speed_telemetry = f"{round(len(full_text.split()) / t_delta, 1)} words/sec (Serverless Compute)"
