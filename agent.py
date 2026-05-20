@@ -7,11 +7,106 @@ import sqlite3
 import time
 import sys
 import os
+import io  # For handling raw file streams safely
 from ollama import Client
 from streamlit_mic_recorder import speech_to_text
 
+# Safe import router to capture PDF binary text tracking structures cleanly
+try:
+    import pypdf
+except ImportError:
+    pypdf = None
+
 # Silently ignore local self-signed SSL warning flags
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
+# =====================================================================
+#  ☀️ INITIALIZATION & EXTRA-PREMIUM VISUAL CSS PACK (RENDER FIRST)
+# =====================================================================
+st.set_page_config(page_title="Agentic Workspace", page_icon="⚡", layout="wide")
+
+# Safe Session State Keys allocation block to stop missing attribute crashes
+if "chat_history" not in st.session_state:
+    st.session_state.chat_history = []
+if "active_payload" not in st.session_state:
+    st.session_state.active_payload = ""
+if "active_display" not in st.session_state:
+    st.session_state.active_display = ""
+if "speed_telemetry" not in st.session_state:
+    st.session_state.speed_telemetry = "0.0 tokens/sec"
+
+# =====================================================================
+#  ☀️ ULTRABRIGHT HIGH-CONTRAST LIGHT MODE UI STYLING ENGINE
+# =====================================================================
+st.markdown("""
+    <style>
+    /* 1. RESET ALL MAIN VIEWPORT CONTAINERS TO LIGHT MODE */
+    .stApp, [data-testid="stAppViewContainer"], [data-testid="stSidebar"] {
+        background-color: #ffffff !important;
+        color: #0f172a !important;
+    }
+    
+    /* 2. OVERRIDE INPUT BOXES, DROPDOWNS, AND TEXTAREAS NATIVELY */
+    div[data-baseweb="input"], div[data-baseweb="select"], div[data-baseweb="textarea"] {
+        background-color: #f1f5f9 !important;
+        border: 2px solid #cbd5e1 !important;
+        border-radius: 14px !important;
+    }
+    
+    /* Input field click focus accent ring */
+    div[data-baseweb="input"]:focus-within, div[data-baseweb="textarea"]:focus-within {
+        border-color: #4a90e2 !important;
+        background-color: #ffffff !important;
+    }
+    
+    /* 3. CRISP BLACK TYPOGRAPHY FORCE INJECTION */
+    input, select, textarea, [data-baseweb="select"] div {
+        color: #0f172a !important;
+        -webkit-text-fill-color: #0f172a !important;
+    }
+    
+    span, p, div, label, small, h1, h2, h3, h4, h5, h6, li {
+        color: #0f172a !important;
+    }
+
+    /* 4. SOLID FIX FOR DRAG-AND-DROP FILE UPLOADER BLOCKS */
+    [data-testid="stFileUploader"] {
+        background-color: #f8fafc !important;
+        border: 2px dashed #cbd5e1 !important;
+        border-radius: 14px !important;
+    }
+    
+    [data-testid="stFileUploader"] * {
+        color: #0f172a !important;
+        -webkit-text-fill-color: #0f172a !important;
+    }
+
+    /* 5. TEAM CARD CONTAINER DECORATORS (FORCE INLINE TEXT COLORS) */
+    .team-box { 
+        background-color: #f1f5f9 !important; 
+        border: 1px solid #e2e8f0 !important; 
+        padding: 14px !important; 
+        border-radius: 12px !important; 
+        margin-bottom: 8px !important; 
+    }
+    
+    .team-box b, .team-box small {
+        -webkit-text-fill-color: initial !important; /* Disables the global override */
+    }
+
+    /* 6. COMPONENT CARDS AND SUBMISSION BUTTONS */
+    .chat-card { background-color: #f8fafc; border: 1px solid #e2e8f0; padding: 16px; border-radius: 16px; }
+    div[data-testid="stSidebar"] button, div[data-testid="stHorizontalBlock"] button {
+        background-color: #f1f5f9 !important;
+        border: 1px solid #e2e8f0 !important;
+    }
+    div[data-testid="stFormSubmitButton"] button {
+        background-color: #4a90e2 !important;
+        color: #ffffff !important;
+        -webkit-text-fill-color: #ffffff !important;
+    }
+    </style>
+""", unsafe_allow_html=True)
 
 # =====================================================================
 #  1. IDENTITY & ENVIRONMENT CONFIGURATION
@@ -32,7 +127,7 @@ def check_internet_connectivity():
 if "is_online" not in st.session_state:
     st.session_state.is_online = check_internet_connectivity()
 
-# ⚡ CRITICAL FIX: Safe client loader to prevent layout crashes if server is down
+# Safe client loader to prevent layout crashes if server is down
 OLLAMA_HOST_ENV = os.environ.get("OLLAMA_HOST", LOCAL_OLLAMA_URL)
 try:
     if st.session_state.is_online and OLLAMA_HOST_ENV != LOCAL_OLLAMA_URL:
@@ -53,20 +148,22 @@ if "login_authenticated" not in st.session_state:
 
 def render_login_screen():
     st.markdown("""
-        <div style='text-align: center; margin-top: 40px; margin-bottom: -20px;'>
-            <h1 style='font-size: 2.8rem; font-weight: 800; background: linear-gradient(45deg, #4a90e2, #ff7e5f); -webkit-background-clip: text; -webkit-text-fill-color: transparent; letter-spacing: -1px;'>
+        <div style='text-align: center; margin-top: 50px; margin-bottom: -10px;'>
+            <h1 style='font-size: 3rem; font-weight: 900; background: linear-gradient(135deg, #4a90e2, #ff7e5f); -webkit-background-clip: text; -webkit-text-fill-color: transparent; letter-spacing: -1px;'>
                 ⚡ Offline Agent.Ai
             </h1>
         </div>
     """, unsafe_allow_html=True)
 
-    st.markdown("<div style='max-width: 450px; margin: 80px auto; padding: 30px; background-color: var(--secondary-background-color); border-radius: 15px; border: 1px solid rgba(128, 128, 128, 0.2); box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.1);'>", unsafe_allow_html=True)
-    st.markdown("<h3>🔒 Security Access Control</h3>", unsafe_allow_html=True)
+    st.markdown("<div style='max-width: 450px; margin: 60px auto; padding: 36px; background-color: #ffffff; border-radius: 20px; border: 2px solid #e2e8f0; box-shadow: 0 10px 25 rgba(0, 0, 0, 0.04);'>", unsafe_allow_html=True)
+    st.markdown("<h3 style='color:#0f172a; margin-top:0px; font-weight: 800; font-size: 22px;'>🔒 Security Access Control</h3>", unsafe_allow_html=True)
     st.caption("Enter credentials to unlock the Hybrid Agentic Workspace.")
     
     with st.form("security_gateway_form", clear_on_submit=False):
-        input_user = st.text_input("Username Profile", placeholder="Enter username...", label_visibility="visible")
-        input_pass = st.text_input("Password Security Key", type="password", placeholder="Enter secret password...", label_visibility="visible")
+        input_user = st.text_input("Username Profile", placeholder="Enter username...", key="login_uid")
+        input_pass = st.text_input("Password Security Key", type="password", placeholder="Enter secret password...", key="login_pwd")
+        
+        st.markdown("<div style='margin-top: 15px;'></div>", unsafe_allow_html=True)
         submit_login = st.form_submit_button("Unlock Core Systems 🚀", use_container_width=True)
         
         if submit_login:
@@ -81,11 +178,8 @@ def render_login_screen():
     st.markdown("</div>", unsafe_allow_html=True)
 
 if not st.session_state.login_authenticated:
-    st.set_page_config(page_title="Security Gateway", page_icon="🔒", layout="wide")
     render_login_screen()
     st.stop()
-
-st.set_page_config(page_title="Agentic Workspace", page_icon="⚡", layout="wide")
 
 # =====================================================================
 #  2. HYBRID STORAGE BACKEND (POSTGRESQL OR SQLITE ROUTER)
@@ -228,6 +322,10 @@ def clear_database():
 
 init_db()
 
+# Lazy-load values into memory safely
+if len(st.session_state.chat_history) == 0:
+    st.session_state.chat_history = load_chat_history()
+
 # --- Integrated Web Tools ---
 def get_live_weather(city: str) -> str:
     try:
@@ -272,18 +370,6 @@ def query_live_search(query: str) -> str:
 
 tools_map = {"get_live_weather": get_live_weather, "get_world_news": get_world_news, "query_live_search": query_live_search}
 
-# =====================================================================
-#  3. VISUAL PREMIUM STYLING & IMMERSIVE PAGE LAYOUT (ADAPTIVE THEMES)
-# =====================================================================
-if "chat_history" not in st.session_state:
-    st.session_state.chat_history = load_chat_history()
-if "active_payload" not in st.session_state:
-    st.session_state.active_payload = ""
-if "active_display" not in st.session_state:
-    st.session_state.active_display = ""
-if "speed_telemetry" not in st.session_state:
-    st.session_state.speed_telemetry = "0.0 tokens/sec"
-
 # --- SIDEBAR CONTROL DASHBOARD ---
 with st.sidebar:
     st.image("https://img.icons8.com/nolan/128/artificial-intelligence.png", width=60)
@@ -298,42 +384,6 @@ with st.sidebar:
         
     st.markdown("---")
     
-    st.subheader("🌓 UI Workspace Theme")
-    theme_selection = st.radio(
-        "Toggle Layout View",
-        ["☀️ Light Mode Default", "🌙 Dark Mode Premium"],
-        index=0,
-        label_visibility="collapsed"
-    )
-    
-    # Unified Dynamic Layout Styles with high-intensity overrides
-    if theme_selection == "☀️ Light Mode Default":
-        st.markdown("""
-            <style>
-            .stApp, [data-testid="stAppViewContainer"], [data-testid="stSidebar"] { background-color: #ffffff !important; color: #111111 !important; }
-            :root { 
-                --text-color: #111111 !important; 
-                --secondary-background-color: #f0f2f6 !important; 
-                --input-bg: #f0f2f6 !important;
-                --card-bg: #f8f9fa !important;
-            }
-            </style>
-        """, unsafe_allow_html=True)
-    else:
-        st.markdown("""
-            <style>
-            .stApp, [data-testid="stAppViewContainer"], [data-testid="stSidebar"] { background-color: #0e1117 !important; color: #fafafa !important; }
-            :root { 
-                --text-color: #fafafa !important; 
-                --secondary-background-color: #1d2430 !important; 
-                --input-bg: #1d2430 !important;
-                --card-bg: #1f2937 !important;
-            }
-            </style>
-        """, unsafe_allow_html=True)
-
-    st.markdown("---")
-    
     if st.button("New Chat", use_container_width=True, key="new_chat_top_btn"):
         st.session_state.active_payload = ""
         st.session_state.active_display = ""
@@ -344,9 +394,21 @@ with st.sidebar:
     
     st.markdown("---")
     st.subheader("👥 Project Team Members")
-    st.markdown("<div style='background-color: var(--secondary-background-color); padding: 12px; border-radius: 8px; margin-bottom: 8px; border: 1px solid rgba(128,128,128,0.15);'><b style='color:#4a90e2;'>Mrinal Gorain</b><br><small>Lead Developer & Systems Architect</small></div>"
-                "<div style='background-color: var(--secondary-background-color); padding: 12px; border-radius: 8px; margin-bottom: 8px; border: 1px solid rgba(128,128,128,0.15);'><b style='color:#2ecc71;'>Prami Hazra & Sanchari Choudhury</b><br><small>Documentation & Reports</small></div>"
-                "<div style='background-color: var(--secondary-background-color); padding: 12px; border-radius: 8px; margin-bottom: 8px; border: 1px solid rgba(128,128,128,0.15);'><b style='color:#e67e22;'>Mainak Mukherjee & Manas Banerjee</b><br><small>System Evaluation Arrays</small></div>", unsafe_allow_html=True)
+    st.markdown("""
+    <div class='team-box'>
+        <b style='color: #4a90e2 !important;'>Mrinal Gorain</b><br>
+        <small style='color: #475569 !important;'>Lead Developer & Systems Architect</small>
+    </div>
+    <div class='team-box'>
+        <b style='color: #2ecc71 !important;'>Prami Hazra & Sanchari Choudhury</b><br>
+        <small style='color: #475569 !important;'>Documentation & Reports</small>
+    </div>
+    <div class='team-box'>
+        <b style='color: #e67e22 !important;'>Mainak Mukherjee & Manas Banerjee</b><br>
+        <small style='color: #475569 !important;'>System Evaluation Arrays</small>
+    </div>
+""", unsafe_allow_html=True)
+    
     
     st.markdown("---")
     st.markdown("<div style='font-size: 14px; font-weight: 600; color: #4a90e2; margin-top: 15px; margin-bottom: 5px;'>Recent Chats</div>", unsafe_allow_html=True)
@@ -384,14 +446,16 @@ with st.sidebar:
         st.session_state.login_authenticated = False
         st.rerun()
 
-# --- MAIN CHAT PANEL ---
-st.markdown("<h1 style='font-size: 2.5rem; font-weight: 800; background: linear-gradient(45deg, #4a90e2, #ff7e5f); -webkit-background-clip: text; -webkit-text-fill-color: transparent;'>⚡ Offline Smart Agentic Workspace</h1>", unsafe_allow_html=True)
+# =====================================================================
+#  4. MAIN PANEL GRAPHICAL INTERFACE WIREFRAME
+# =====================================================================
+st.markdown("<h1 style='font-size: 2.5rem; font-weight: 900; background: linear-gradient(45deg, #4a90e2, #ff7e5f); -webkit-background-clip: text; -webkit-text-fill-color: transparent;'>⚡ Offline Smart Agentic Workspace</h1>", unsafe_allow_html=True)
 st.caption(f"Core Computation Velocity Node: `{st.session_state.speed_telemetry}`")
 
-# Display conversation logs
+# Render historical conversation streams inside isolated chat panels
 for message in st.session_state.chat_history:
     with st.chat_message(message["role"]):
-        st.markdown(f"<div style='background-color: var(--card-bg); padding: 15px; border-radius: 12px; border: 1px solid rgba(128,128,128,0.15);'>{message['content']}</div>", unsafe_allow_html=True)
+        st.markdown(f"<div class='chat-card'>{message['content']}</div>", unsafe_allow_html=True)
 
 # Quick Access Shortcut Pills
 pill_cols = st.columns(3)
@@ -410,16 +474,8 @@ with pill_cols[2]:
 
 st.markdown("<br>", unsafe_allow_html=True)
 
-# Form entry callback handler
-def handle_submission_callback():
-    raw_text = st.session_state.gemini_text_box.strip()
-    if raw_text:
-        st.session_state.active_display = raw_text
-        st.session_state.active_payload = raw_text
-        st.session_state.gemini_text_box = ""
-
 # =====================================================================
-#  FILE ATTACHMENT & MIC LAYOUT MATRIX
+#  ⚙️ ENHANCED EXTRACTOR CORE FOR MULTIMODAL DOCS & PDFS
 # =====================================================================
 file_payload_string = ""
 voice_text_transcription = None
@@ -427,78 +483,76 @@ voice_text_transcription = None
 col_file, col_mic, col_spacer = st.columns([5.0, 2.5, 4.5])
 
 with col_file:
-    st.markdown("<div style='font-size: 14px; font-weight: 600; margin-bottom: 4px;'>📂 Upload Context</div>", unsafe_allow_html=True)
-    uploaded_doc = st.file_uploader("Upload Context", type=["txt", "json", "c", "py", "html", "csv"], key="gemini_file_node", label_visibility="collapsed")
+    st.markdown("<div style='font-size: 14px; font-weight: 700; margin-bottom: 6px; color: #0f172a;'>📂 Upload Context</div>", unsafe_allow_html=True)
+    uploaded_doc = st.file_uploader("Upload Context", type=["txt", "json", "c", "py", "html", "csv", "pdf"], key="gemini_file_node", label_visibility="collapsed")
+    
     if uploaded_doc is not None:
         try:
-            file_raw = uploaded_doc.read().decode("utf-8", errors="ignore")
-            file_payload_string = f"\n\n[SYSTEM ATTACHED FILE CONTEXT DETAILS:\nFilename: {uploaded_doc.name}\nContent:\n{file_raw}\n]"
+            # 📄 PATH A: Handle PDF documents using pypdf text-stream tracking layers
+            if uploaded_doc.name.lower().endswith('.pdf'):
+                if pypdf is None:
+                    st.error("❌ System Sync Interrupted: 'pypdf' package is missing from your virtual environment pipeline. Run 'pip install pypdf'.")
+                else:
+                    pdf_stream = io.BytesIO(uploaded_doc.read())
+                    pdf_reader = pypdf.PdfReader(pdf_stream)
+                    extracted_pdf_text = ""
+                    for exact_page_num, page_node in enumerate(pdf_reader.pages):
+                        page_text_extracted = page_node.extract_text()
+                        if page_text_extracted:
+                            extracted_pdf_text += f"\n--- Page {exact_page_num + 1} ---\n{page_text_extracted}"
+                    
+                    if extracted_pdf_text.strip():
+                        file_payload_string = f"\n\n[SYSTEM ATTACHED PDF CONTEXT DETAILS:\nFilename: {uploaded_doc.name}\nContent:\n{extracted_pdf_text}\n]"
+                    else:
+                        st.warning("⚠️ Text Parsing Notification: Attached PDF appears to be empty or contains scanned images only.")
+            
+            # 📝 PATH B: Handle code sheets, standard txt logs, web markups and datasets
+            else:
+                file_raw = uploaded_doc.read().decode("utf-8", errors="ignore")
+                file_payload_string = f"\n\n[SYSTEM ATTACHED FILE CONTEXT DETAILS:\nFilename: {uploaded_doc.name}\nContent:\n{file_raw}\n]"
         except Exception as e:
-            st.error(f"Err: {str(e)}")
+            st.error(f"Err Parsing Document Node: {str(e)}")
 
 with col_mic:
-    st.markdown("<div style='font-size: 14px; font-weight: 600; margin-bottom: 4px;'>🎙️ Voice Mic</div>", unsafe_allow_html=True)
-    voice_text_transcription = speech_to_text(start_prompt="Record", stop_prompt="Stop", language="en", just_once=True, key="gemini_mic_stream")
+    st.markdown("<div style='font-size: 14px; font-weight: 700; margin-bottom: 6px; color: #0f172a;'>🎙️ Voice Mic</div>", unsafe_allow_html=True)
+    st.markdown("<div style='background-color:#f8fafc; border:2px solid #e2e8f0; padding:9px 12px; border-radius:14px; text-align:center;'>", unsafe_allow_html=True)
+    voice_text_transcription = speech_to_text(start_prompt="Record 🎙️", stop_prompt="Stop 🟥", language="en", just_once=True, key="gemini_mic_stream")
+    st.markdown("</div>", unsafe_allow_html=True)
+    
     if voice_text_transcription:
         st.session_state.active_display = voice_text_transcription
         st.session_state.active_payload = voice_text_transcription
 
-# --- CORE PREMIUM CSS OVERRIDE SYSTEM ---
-# --- CORE PREMIUM CSS OVERRIDE SYSTEM ---
+# --- FORM BUTTON DESIGN CONSTANTS ---
 st.markdown("""
 <style>
-    /* 1. AGGRESSIVE TEXT INPUT TARGETING FOR ADAPTIVE THEMING */
-    div[data-baseweb="input"] {
-        background-color: var(--input-bg) !important;
-        border: 1px solid rgba(128, 128, 128, 0.4) !important;
-        border-radius: 14px !important;
-        padding: 4px 12px !important;
-        transition: background-color 0.3s ease, border-color 0.3s ease;
-    }
-    
-    /* Force the text input element inside the nested shadow DOM wrapper */
-    div[data-baseweb="input"] input {
-        color: var(--text-color) !important;
-        -webkit-text-fill-color: var(--text-color) !important;
-        background-color: transparent !important;
-    }
-    
-    /* Maintain readability parameters for placeholder strings */
-    div[data-baseweb="input"] input::placeholder {
-        color: var(--text-color) !important;
-        opacity: 0.5 !important;
-    }
-
-    /* 2. OPTIMIZED FORM HANDLING LAYOUT & BUTTON ALIGNMENT */
     div[data-testid="stFormSubmitButton"] button {
         width: 100% !important;
         white-space: nowrap !important;
         border-radius: 14px !important;
         background-color: #4a90e2 !important;
         color: white !important;
+        -webkit-text-fill-color: white !important;
         font-weight: bold !important;
         height: 46px !important;
         border: none !important;
     }
-    
-    div[data-testid="stForm"] {
-        border: none !important;
-        padding: 0px !important;
-        box-shadow: none !important;
-    }
-    
-    /* 3. COHESIVE LOG & MESSAGE CARD ACCENTS */
-    .log-card { 
-        background-color: var(--secondary-background-color); 
-        color: var(--text-color); 
-        padding: 15px; 
-        border-radius: 10px; 
-        margin-bottom: 10px; 
-        border-left: 5px solid #4a90e2; 
-        border: 1px solid rgba(128, 128, 128, 0.15);
-    }
+    div[data-testid="stForm"] { border: none !important; padding: 0px !important; box-shadow: none !important; }
 </style>
 """, unsafe_allow_html=True)
+
+# Form entry callback handler
+def handle_submission_callback():
+    raw_text = st.session_state.gemini_text_box.strip()
+    if raw_text:
+        # If document context exists, merge it cleanly directly on action trigger
+        if file_payload_string:
+            st.session_state.active_display = f"{raw_text} 📎 (Context Attached: {uploaded_doc.name})"
+            st.session_state.active_payload = f"{raw_text} {file_payload_string}"
+        else:
+            st.session_state.active_display = raw_text
+            st.session_state.active_payload = raw_text
+        st.session_state.gemini_text_box = ""
 
 # --- THE PROMPT INPUT FORM BAR ---
 with st.form("multimodal_prompt_form", clear_on_submit=True):
@@ -510,12 +564,8 @@ with st.form("multimodal_prompt_form", clear_on_submit=True):
     with col_submit_button:
         submit_triggered = st.form_submit_button("Submit 🚀", on_click=handle_submission_callback)
 
-if file_payload_string and st.session_state.active_payload:
-    if not st.session_state.active_payload.endswith(file_payload_string):
-        st.session_state.active_payload += file_payload_string
-
 # =====================================================================
-#  4. LIVE AGENT THINKING LOOP CONTROLLER
+#  5. LIVE AGENT PROCESSING LOOP
 # =====================================================================
 if st.session_state.active_display:
     display_user_query = st.session_state.active_display
@@ -525,17 +575,17 @@ if st.session_state.active_display:
     st.session_state.active_payload = ""
     
     with st.chat_message("user"):
-        st.markdown(display_user_query)
+        st.markdown(f"<div class='chat-card'>{display_user_query}</div>", unsafe_allow_html=True)
     
     st.session_state.chat_history.append({"role": "user", "content": display_user_query})
-    save_message("user", display_user_query)
+    save_message("user", final_query_payload)
 
     with st.chat_message("assistant"):
         response_placeholder = st.empty()
         response_placeholder.markdown("⏳ *Accessing intelligence matrix...*")
         
         if client is None:
-            response_placeholder.error("❌ Model Integration Sync Offline: The underlying inference connector could not bind initialization rules. Ensure your remote proxy container is running.")
+            response_placeholder.error("❌ Model Integration Sync Offline: Ensure your local Ollama runtime engine is active.")
         else:
             system_rules = f"""
 You are a premium hybrid AI agent operating smoothly in both online and offline network frames.
@@ -559,7 +609,7 @@ CRITICAL MULTILINGUAL LANGUAGE MATRIX DIRECTIVE:
   3. If the user asks in standard English, reply in standard English.
 
 CURRENT NETWORK STATE STATUS:
-- System is currently executing inside an {'ONLINE' if st.session_state.is_online else 'OFFLINE'} environment.
+- System is currently executing inside an ONLINE environment.
 """
             if st.session_state.is_online:
                 system_rules += """
@@ -577,8 +627,8 @@ If the request requires live data parameters, you MUST output a tool calling usi
             for past_msg in st.session_state.chat_history[-4:]:
                 agent_context.append({"role": past_msg["role"], "content": past_msg["content"]})
                 
-            if file_payload_string:
-                agent_context.append({"role": "user", "content": final_query_payload})
+            # Safely inject document payload context straight into active window context array
+            agent_context.append({"role": "user", "content": final_query_payload})
 
             running_logs = ""
             tool_executed = False
@@ -626,9 +676,10 @@ If the request requires live data parameters, you MUST output a tool calling usi
                             tool_executed = True
 
                 if tool_executed:
-                    st.session_state.chat_history.append({"role": "assistant", "content": final_text_output})
-                    save_message("assistant", final_text_output)
-                    st.rerun()
+                    formatted_tool_output = f"<div class='chat-card'>{final_text_output}</div>"
+                    response_placeholder.markdown(formatted_tool_output, unsafe_allow_html=True)
+                    st.session_state.chat_history.append({"role": "assistant", "content": formatted_tool_output})
+                    save_message("assistant", formatted_tool_output)
                 else:
                     start_time = time.time()
                     stats_tracker = [0]
@@ -640,9 +691,11 @@ If the request requires live data parameters, you MUST output a tool calling usi
                             stream=True,
                             options={"temperature": 0.1, "num_thread": 4}
                         )
+                        yield "<div class='chat-card'>"
                         for chunk in stream_res:
                             stats_tracker[0] += 1
                             yield chunk['message']['content']
+                        yield "</div>"
 
                     full_response = response_placeholder.write_stream(text_stream_generator())
                     elapsed_time = time.time() - start_time
@@ -652,7 +705,7 @@ If the request requires live data parameters, you MUST output a tool calling usi
                     st.session_state.chat_history.append({"role": "assistant", "content": full_response})
                     save_message("assistant", full_response)
             except Exception as conn_err:
-                response_placeholder.error(f"⚠️ Core Framework Exception Notice: Cloud backend link could not parse model tokens. Check that your Ubuntu ngrok host tunnel parameter is active.")
+                response_placeholder.error(f"⚠️ Runtime Token Decoder Exception.")
 
         st.components.v1.html("""
             <script>
