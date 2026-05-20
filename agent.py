@@ -121,11 +121,12 @@ NEON_DATABASE_URL = "postgresql://neondb_owner:npg_cOan5sF7yRTU@ep-long-lake-aol
 
 # Serverless Cloud Inference Configuration Layer
 CLOUD_INFERENCE_URL = "https://api-inference.huggingface.co/models/meta-llama/Meta-Llama-3-8B-Instruct"
-#  NEW SECURE CONFIGURATION
+
 if "CLOUD_API_KEY" in st.secrets:
     CLOUD_API_KEY = st.secrets["CLOUD_API_KEY"]
 else:
     CLOUD_API_KEY = "Bearer hf_DEFAULT_MOCK_KEY"  # Fallback
+
 try:
     import psycopg2
     from psycopg2.extras import DictCursor
@@ -244,7 +245,6 @@ def get_unique_sidebar_titles(username):
         for r in rows:
             line = r[0].split('\n')[0]
             if "📎" in line: line = line.split(" 📎")[0]
-            if "📷" in line: line = line.split(" 📷")[0]
             if len(line) > 24: line = line[:22] + "..."
             if line not in seen:
                 seen.add(line)
@@ -263,7 +263,7 @@ except Exception:
     st.session_state.is_online = False
 
 # =====================================================================
-#  🔒 TWIN-CHANNEL PRIVACY GATEWAY (REQUIREMENT 2: SIGN UP & DUAL LOGIN)
+#  🔒 TWIN-CHANNEL PRIVACY GATEWAY (SIGN UP & DUAL LOGIN)
 # =====================================================================
 ADMIN_UID, ADMIN_PWD = "adminmg", "Pritam#@2006"
 
@@ -351,7 +351,7 @@ def query_live_search(query: str) -> str:
         from duckduckgo_search import DDGS
         with DDGS() as ddgs:
             res = [r for r in ddgs.text(query, max_results=2)]
-        return f"\n[Search Engine Context Index: {' '.join([r.get('body','') for r in res])}"
+        return f"\n[Search Engine Context Index: {' '.join([r.get('body','') for r in res])}]"
     except Exception: return ""
 
 # =====================================================================
@@ -364,10 +364,8 @@ with st.sidebar:
     st.caption("☁️ Cloud Server Offloaded Inference Engine Enabled")
     
     st.markdown("---")
-    # REQUIREMENT 3: Persona Mapping Selectbox Component Router
     cfg_tone = st.selectbox("🎭 Engine Persona Matrix", ["Standard Agent", "Expert Professor", "Code Auditor", "Brief Summary Node"])
     
-    # PRIVACY MASK: Admin panel only displays User IDs and handles access toggle states
     if st.session_state.login_role == "admin":
         st.markdown("---")
         st.subheader("👥 Registered User Status Node")
@@ -396,7 +394,6 @@ with st.sidebar:
         else:
             st.caption("Zero student accounts registered in system records.")
             
-    # REQUIREMENT 6: Side-mounted Historical Prompt Sync Menu
     if st.session_state.login_role == "user" or st.session_state.login_role == "admin":
         st.markdown("---")
         st.subheader("📋 Recent Sidebar Queries")
@@ -424,9 +421,8 @@ with st.sidebar:
         st.rerun()
 
 # =====================================================================
-#  5. MAIN PAGE LAYOUT ENGINE (REQUIREMENT 1: LANDING WITH SEARCH FIRST)
+#  5. MAIN PAGE LAYOUT ENGINE (LANDING WITH SEARCH FIRST)
 # =====================================================================
-# Hides conversation arrays completely if session history is blank, forcing search bar layout first
 if len(st.session_state.chat_history) > 0:
     st.markdown("### 💬 Current Session Log Streams")
     for idx, msg in enumerate(st.session_state.chat_history):
@@ -448,9 +444,9 @@ if len(st.session_state.chat_history) > 0:
 
 st.markdown("---")
 
-# REQUIREMENT 4: Hardware Camera Capture Framework & Multimodal Document Buffers
-col_file, col_cam, col_mic = st.columns([4.5, 4.5, 3.0])
-file_context, camera_context, mic_transcription = "", "", None
+# Optimized Document Input & Voice Recorder Layout (CAMERA REMOVED COMPONENT)
+col_file, col_mic = st.columns([6.0, 6.0])
+file_context, mic_transcription = "", None
 
 with col_file:
     st.markdown("**📂 Attach Technical Documents Context**")
@@ -464,18 +460,11 @@ with col_file:
             file_context = f"\n[Attached Code Document '{uploaded.name}':\n{uploaded.read().decode('utf-8', errors='ignore')}\n]"
         st.success(f"Context tokens ingested for {uploaded.name}!")
 
-with col_cam:
-    st.markdown("**📷 Trigger Live Hardware Camera Capturing Node**")
-    cam_shot = st.camera_input("Hardware Matrix Capture Input", label_visibility="collapsed")
-    if cam_shot is not None:
-        camera_context = f"\n[SYSTEM CAMERA SNAPSHOT BUFFER EXTRACTION NODE: {len(cam_shot.getvalue())} bytes]"
-        st.success("Hardware capture frame buffer locked into prompt matrix context!")
-
 with col_mic:
     st.markdown("**🎙️ Record Audio Voice Prompts**")
     mic_transcription = speech_to_text(start_prompt="Record Voice 🎙️", stop_prompt="Halt 🟥", language="en", just_once=True)
 
-# Central Search Container Form Interface (Primary Homepage Core Element Viewport)
+# Central Search Container Form Interface
 with st.form("central_agent_search_boundary", clear_on_submit=True):
     col_field, col_btn = st.columns([10.0, 2.0])
     with col_field:
@@ -496,9 +485,8 @@ elif st.session_state.active_payload:
 if final_query:
     display_string = final_query
     if uploaded: display_string += f" 📎 (Attached Document File: {uploaded.name})"
-    if cam_shot: display_string += " 📷 (Attached Camera Screenshot Capture Context Frame)"
     
-    payload_string = f"{final_query} {file_context} {camera_context}"
+    payload_string = f"{final_query} {file_context}"
     
     st.session_state.chat_history.append({"role": "user", "content": display_string})
     save_message(st.session_state.login_username, "user", display_string)
@@ -506,7 +494,7 @@ if final_query:
     with st.chat_message("assistant"):
         placeholder = st.empty()
         
-        # REQUIREMENT 10: High-Contrast Animated Thinking Loader Placeholder View (0% Clean Raw Text Markdown Output)
+        # High-Contrast Animated Thinking Loader Placeholder View (0% Clean Raw Text Markdown Output)
         placeholder.markdown("🧠 **Thinking... accessing serverless cloud layers... [0% local system load matching]**")
         
         # Execute Live Tools
@@ -533,7 +521,6 @@ CONTEXT REFERENCE PACK:
 {web_data}
 """
         
-        # High-Performance Remote Cloud Provider Routing Layer (Requirement 9 & 10 Combined)
         headers = {"Authorization": CLOUD_API_KEY, "Content-Type": "application/json"}
         prompt_payload = f"System Rules:\n{rules}\nUser Prompt:\n{payload_string}\nAssistant:"
         
@@ -552,7 +539,6 @@ CONTEXT REFERENCE PACK:
             if t_delta > 0:
                 st.session_state.speed_telemetry = f"{round(len(full_text.split()) / t_delta, 1)} words/sec (Serverless Compute)"
             
-            # Displays response inside a static structural card container without outputting messy div tags
             placeholder.markdown(full_text)
             
             st.session_state.chat_history.append({"role": "assistant", "content": full_text})
@@ -560,7 +546,7 @@ CONTEXT REFERENCE PACK:
         except Exception as ex:
             placeholder.error(f"Cloud Inference Connection Exception: {str(ex)}")
                 
-    # REQUIREMENT 5: Smooth Automated Screen Viewport Scrolling Core Script Layer
+    # Smooth Automated Screen Viewport Scrolling Core Script Layer
     st.components.v1.html("""
         <script>
             var viewport = window.parent.document.querySelector('.main');
