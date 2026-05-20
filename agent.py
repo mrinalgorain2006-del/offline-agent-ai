@@ -116,12 +116,11 @@ st.markdown("""
 # =====================================================================
 #  1. CLOUD STORAGE ROUTER & PERSISTENT DATA SCHEMA (NEON ENVIRONMENT)
 # =====================================================================
-#  FINAL HIGH-STABILITY SERVERLESS ENDPOINT
 SQLITE_DB_FILE = "chat_history.db"
 NEON_DATABASE_URL = "postgresql://neondb_owner:npg_cOan5sF7yRTU@ep-long-lake-aolrehwr.c-2.ap-southeast-1.aws.neon.tech/neondb?sslmode=require"
 
-# High-Performance Serverless Gateway Node
-CLOUD_INFERENCE_URL = "https://api-inference.huggingface.co/models/Qwen/Qwen2.5-Coder-7B-Instruct"
+# FIXED: Modern Global Proxy Routing Gateway URL to pass through Streamlit cloud firewalls
+CLOUD_INFERENCE_URL = "https://router.huggingface.co/v1/chat/completions"
 
 if "CLOUD_API_KEY" in st.secrets:
     CLOUD_API_KEY = st.secrets["CLOUD_API_KEY"]
@@ -445,7 +444,7 @@ if len(st.session_state.chat_history) > 0:
 
 st.markdown("---")
 
-# Optimized Document Input & Voice Recorder Layout (CAMERA REMOVED COMPONENT)
+# Optimized Document Input & Voice Recorder Layout
 col_file, col_mic = st.columns([6.0, 6.0])
 file_context, mic_transcription = "", None
 
@@ -494,8 +493,6 @@ if final_query:
     
     with st.chat_message("assistant"):
         placeholder = st.empty()
-        
-        # High-Contrast Animated Thinking Loader Placeholder View (0% Clean Raw Text Markdown Output)
         placeholder.markdown("🧠 **Thinking... accessing serverless cloud layers... [0% local system load matching]**")
         
         # Execute Live Tools
@@ -523,31 +520,32 @@ CONTEXT REFERENCE PACK:
 """
         
         headers = {"Authorization": CLOUD_API_KEY, "Content-Type": "application/json"}
-        prompt_payload = f"System Rules:\n{rules}\nUser Prompt:\n{payload_string}\nAssistant:"
         
-        #  NEW MULTI-FORMAT COMPATIBLE PARSING LAYER
-        #  STABLE MULTIMODAL INFERENCE ROUTING MATRIX
+        # FIXED: Structured standard OpenAI Open-API Completions array matrix payload
+        chat_payload = {
+            "model": "meta-llama/Meta-Llama-3-8B-Instruct",
+            "messages": [
+                {"role": "system", "content": rules},
+                {"role": "user", "content": payload_string}
+            ],
+            "max_tokens": 600,
+            "temperature": 0.2
+        }
+        
         try:
             t_start = time.time()
-            response = requests.post(
-                CLOUD_INFERENCE_URL, 
-                headers=headers, 
-                json={"inputs": prompt_payload, "parameters": {"max_new_tokens": 600, "temperature": 0.2}}, 
-                timeout=15
-            )
+            response = requests.post(CLOUD_INFERENCE_URL, headers=headers, json=chat_payload, timeout=15)
             t_delta = time.time() - t_start
             
-            # Defensive check: Ensure server returned content before parsing
             if not response.text.strip():
                 full_text = "Serverless pipeline returned an empty response stream. Please re-trigger the query engine."
             else:
                 res_json = response.json()
-                if isinstance(res_json, list) and len(res_json) > 0:
-                    raw_txt = res_json[0].get("generated_text", "")
-                    # Extract text cleaner split
-                    full_text = raw_txt.split("Assistant:")[-1].strip() if "Assistant:" in raw_txt else raw_txt
+                # Parse Chat Completion JSON structure cleanly
+                if isinstance(res_json, dict) and "choices" in res_json:
+                    full_text = res_json["choices"][0]["message"]["content"].strip()
                 elif isinstance(res_json, dict) and "error" in res_json:
-                    full_text = f"Inference Notice: {res_json['error']}"
+                    full_text = f"Inference Routing Layer Notice: {res_json['error'].get('message', res_json['error'])}"
                 else:
                     full_text = "Cloud token pipeline completed with an alternative structure state."
                     
@@ -560,5 +558,5 @@ CONTEXT REFERENCE PACK:
             
         except Exception as ex:
             placeholder.error(f"Cloud Inference Connection Exception: {str(ex)}")
-    #  REPLACE WITH THIS CLEAN FINISHED APP RE-RENDER LAYER
+
     st.write("")  # Flushes buffer cleanly
