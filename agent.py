@@ -186,7 +186,6 @@ def save_message(username, sender, text):
     except Exception:
         pass
 
-# FIXED SIGNUP INFRASTRUCTURE FUNCTION
 def register_user_in_db(uid, pwd):
     conn = None
     try:
@@ -194,7 +193,6 @@ def register_user_in_db(uid, pwd):
         cursor = conn.cursor()
         param = "%s" if USING_CLOUD_DB else "?"
         
-        # Check if record already exists first natively to avoid primary constraint crash loops
         cursor.execute(f"SELECT student_uid FROM student_profiles WHERE student_uid = {param}", (uid,))
         if cursor.fetchone():
             conn.close()
@@ -452,7 +450,6 @@ with st.sidebar:
             
     st.markdown("---")
     st.subheader("📋 Project Architecture Deck")
-    # UPDATED: Premium Colored Left Accent Bands UI Layout Integration
     st.markdown("""
         <div class='team-box-blue'>
             <b>Mrinal Gorain</b><br>
@@ -565,9 +562,37 @@ if final_query:
         else:
             web_data = query_live_search(final_query)
             
+        # DETAILED INDIVIDUAL PERSONA Blueprints added to guarantee structurally unique answers
+        persona_behavior = ""
+        if cfg_tone == "Standard Agent":
+            persona_behavior = (
+                "Respond as a highly balanced, direct, and helpful AI assistant. "
+                "Provide clear, general-purpose explanations with equal focus on theory and usability."
+            )
+        elif cfg_tone == "Expert Professor":
+            persona_behavior = (
+                "Respond as an advanced academic computer science professor. "
+                "Break down the answer using deep technical core principles, rigorous architectural analysis, "
+                "historical context, and foundational theory. Use comprehensive technical vocabulary."
+            )
+        elif cfg_tone == "Code Auditor":
+            persona_behavior = (
+                "Respond as a strict, expert senior software quality engineer and code auditor. "
+                "Focus heavily on syntax execution, edge-case debugging, runtime optimization parameters, "
+                "memory leak analysis, security vulnerabilities, and raw logical code blocks."
+            )
+        elif cfg_tone == "Brief Summary Node":
+            persona_behavior = (
+                "Respond as an ultra-compact information summarizer. "
+                "Strip away all introductory prose, pleasantries, and deep fluff. Give the absolute core answer "
+                "in a maximum of 3-4 bullet points or a single precise paragraph. Keep it ultra-short."
+            )
+
         rules = f"""You are the premium cloud-offloaded intelligence layer of 'Offline.Ai', built by Mrinal Gorain from Nalhati Government Polytechnic, CST department.
 Project portfolio documentation was compiled by Prami Hazra and Sanchari Choudhury.
-Persona Setting: {cfg_tone}
+
+CRITICAL PERSONA MATRIX DIRECTIVE:
+{persona_behavior}
 
 MANDATORY LINGUISTIC TARGETING MATRIX:
 - Your response language track MUST perfectly match the script used in the 'User Prompt'.
