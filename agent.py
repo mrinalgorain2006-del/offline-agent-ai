@@ -296,14 +296,30 @@ def load_user_chat_history(username):
     except Exception:
         return []
 
+# FIXED: Integrated Strict 1-Hour Time-Delta Filter Condition
 def get_unique_sidebar_titles(username):
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
-        param = "%s" if USING_CLOUD_DB else "?"
         clean_user = str(username).strip().lower()
         
-        cursor.execute(f"SELECT message_text FROM logs WHERE LOWER(username) = LOWER({param}) AND sender='user' ORDER BY id DESC", (clean_user,))
+        if USING_CLOUD_DB:
+            cursor.execute("""
+                SELECT message_text FROM logs 
+                WHERE LOWER(username) = LOWER(%s) 
+                AND sender='user' 
+                AND timestamp <= NOW() - INTERVAL '1 hour'
+                ORDER BY id DESC
+            """, (clean_user,))
+        else:
+            cursor.execute("""
+                SELECT message_text FROM logs 
+                WHERE LOWER(username) = LOWER(?) 
+                AND sender='user' 
+                AND timestamp <= DATETIME('now', '-1 hour')
+                ORDER BY id DESC
+            """, (clean_user,))
+            
         rows = cursor.fetchall()
         cursor.close()
         conn.close()
@@ -629,7 +645,7 @@ MANDATORY LINGUISTIC TARGETING MATRIX:
 - Your response language track MUST perfectly match the script used in the 'User Prompt'.
 - If the User Prompt uses English alphabets/words, you MUST generate the entire answer in English. 
 - You are strictly forbidden from writing sentences or lists in Bengali script unless the user explicitly prompts in Bengali characters.
-- Base your answers for weather, news, current affairs, or political offices strictly on the facts passed in the CONTEXT REFERENCE PACK. Do not guess or fallback to outdated pre-trained history data templates.
+- Base your answers for weather, news, or regional current affairs strictly on the fresh telemetry passed inside the CONTEXT REFERENCE PACK below. Do not guess or extrapolate using outdated pre-trained memory vectors.
 
 CONTEXT REFERENCE PACK (USE THIS TO ANSWER WEATHER/NEWS QUERIES):
 {web_data}
@@ -643,11 +659,11 @@ CONTEXT REFERENCE PACK (USE THIS TO ANSWER WEATHER/NEWS QUERIES):
                 {"role": "user", "content": payload_string}
             ],
             "max_tokens": 1000,
-            "temperature": 0.0 # Force absolute deterministic accuracy constraints
+            "temperature": 0.0 # Force absolute deterministic constraints to stop hallucinations completely
         }
         
         try:
-            # FIXED POSITION LOGGING PIPELINE MATRIX
+            # Save User message exactly once
             save_message(st.session_state.login_username, "user", display_string)
 
             response = requests.post(CLOUD_INFERENCE_URL, headers=headers, json=chat_payload, timeout=15)
@@ -663,9 +679,10 @@ CONTEXT REFERENCE PACK (USE THIS TO ANSWER WEATHER/NEWS QUERIES):
                 else:
                     full_text = "Cloud token pipeline completed with an alternative structure state."
             
+            # Save Assistant response exactly once
             save_message(st.session_state.login_username, "assistant", full_text)
             
-            # CORE FIX: We load both chat logs AND the verified unique list items safely back into memory blocks before drawing views
+            # Update Chat Log views dynamically
             st.session_state.chat_history = load_user_chat_history(st.session_state.login_username)
             st.session_state.sidebar_queries = get_unique_sidebar_titles(st.session_state.login_username)
 
