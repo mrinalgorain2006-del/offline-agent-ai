@@ -173,6 +173,7 @@ def init_db():
     cursor.execute(f"CREATE TABLE IF NOT EXISTS reinforcement_feedback (id {auto_inc}, prompt TEXT, response TEXT, reward_score INTEGER, timestamp {ts_type})")
     cursor.execute(f"CREATE TABLE IF NOT EXISTS student_profiles (id {auto_inc}, student_uid TEXT UNIQUE, student_pwd TEXT, is_active INTEGER DEFAULT 1, timestamp {ts_type})")
     conn.commit()
+    cursor.close()
     conn.close()
 
 def save_message(username, sender, text):
@@ -183,6 +184,7 @@ def save_message(username, sender, text):
         clean_user = str(username).strip().lower()
         cursor.execute(f"INSERT INTO logs (username, sender, message_text) VALUES ({param}, {param}, {param})", (clean_user, sender, text))
         conn.commit()
+        cursor.close()
         conn.close()
     except Exception:
         pass
@@ -197,16 +199,20 @@ def register_user_in_db(uid, pwd):
         
         cursor.execute(f"SELECT student_uid FROM student_profiles WHERE LOWER(student_uid) = LOWER({param})", (clean_uid,))
         if cursor.fetchone():
+            cursor.close()
             conn.close()
             return False
             
         cursor.execute(f"INSERT INTO student_profiles (student_uid, student_pwd, is_active) VALUES ({param}, {param}, 1)", (clean_uid, pwd))
         conn.commit()
+        cursor.close()
         conn.close()
         return True
     except Exception as e:
         if conn:
-            try: conn.close()
+            try: 
+                cursor.close()
+                conn.close()
             except: pass
         return False
 
@@ -218,6 +224,7 @@ def validate_user_login_db(uid, pwd):
         clean_uid = str(uid).strip().lower()
         cursor.execute(f"SELECT student_pwd, is_active FROM student_profiles WHERE LOWER(student_uid) = LOWER({param})", (clean_uid,))
         row = cursor.fetchone()
+        cursor.close()
         conn.close()
         if row and row[0] == pwd and int(row[1]) == 1:
             return True
@@ -231,6 +238,7 @@ def fetch_all_users_raw():
         cursor = conn.cursor()
         cursor.execute("SELECT student_uid, is_active FROM student_profiles ORDER BY id DESC")
         rows = cursor.fetchall()
+        cursor.close()
         conn.close()
         return rows
     except Exception:
@@ -243,6 +251,7 @@ def change_user_status_db(uid, target_status):
         param = "%s" if USING_CLOUD_DB else "?"
         cursor.execute(f"UPDATE student_profiles SET is_active = {param} WHERE LOWER(student_uid) = LOWER({param})", (target_status, str(uid).strip().lower()))
         conn.commit()
+        cursor.close()
         conn.close()
     except Exception:
         pass
@@ -254,6 +263,7 @@ def delete_user_from_db(uid):
         param = "%s" if USING_CLOUD_DB else "?"
         cursor.execute(f"DELETE FROM student_profiles WHERE LOWER(student_uid) = LOWER({param})", (str(uid).strip().lower(),))
         conn.commit()
+        cursor.close()
         conn.close()
     except Exception:
         pass
@@ -265,6 +275,7 @@ def save_rl_feedback(prompt, response, score):
         param = "%s" if USING_CLOUD_DB else "?"
         cursor.execute(f"INSERT INTO reinforcement_feedback (prompt, response, reward_score) VALUES ({param}, {param}, {param})", (prompt, response, score))
         conn.commit()
+        cursor.close()
         conn.close()
     except Exception:
         pass
@@ -277,6 +288,7 @@ def load_user_chat_history(username):
         clean_user = str(username).strip().lower()
         cursor.execute(f"SELECT sender, message_text FROM logs WHERE LOWER(username) = LOWER({param}) ORDER BY id ASC", (clean_user,))
         rows = cursor.fetchall()
+        cursor.close()
         conn.close()
         return [{"role": row[0], "content": row[1]} for row in rows]
     except Exception:
@@ -291,6 +303,7 @@ def get_unique_sidebar_titles(username):
         
         cursor.execute(f"SELECT message_text FROM logs WHERE LOWER(username) = LOWER({param}) AND sender='user' ORDER BY id DESC", (clean_user,))
         rows = cursor.fetchall()
+        cursor.close()
         conn.close()
         
         seen, clean_titles = set(), []
@@ -612,6 +625,7 @@ MANDATORY LINGUISTIC TARGETING MATRIX:
 - Your response language track MUST perfectly match the script used in the 'User Prompt'.
 - If the User Prompt uses English alphabets/words, you MUST generate the entire answer in English. 
 - You are strictly forbidden from writing sentences or lists in Bengali script unless the user explicitly prompts in Bengali characters.
+- Base your answers for weather, news, or current affairs strictly on the factual numbers passed in the CONTEXT REFERENCE PACK. Do not guess or extrapolate.
 
 CRITICAL MATHEMATICAL LATEX FORMATTING RULES:
 - Use $inline$ for running equations and $$display$$ notation blocks for standalone multi-line equations.
@@ -628,11 +642,11 @@ CONTEXT REFERENCE PACK (USE THIS TO ANSWER WEATHER/NEWS QUERIES):
                 {"role": "user", "content": payload_string}
             ],
             "max_tokens": 1000,
-            "temperature": 0.1
+            "temperature": 0.0 # Force absolute deterministic accuracy to stop hallucinations
         }
         
         try:
-            # FIXED MASTER COMMITMENT LINE: Runs exactly once before the network block executes
+            # MASTER TRANSACTION LOG COMMITMENT BLOCK
             st.session_state.chat_history.append({"role": "user", "content": display_string})
             save_message(st.session_state.login_username, "user", display_string)
 
@@ -649,7 +663,6 @@ CONTEXT REFERENCE PACK (USE THIS TO ANSWER WEATHER/NEWS QUERIES):
                 else:
                     full_text = "Cloud token pipeline completed with an alternative structure state."
             
-            # Commit the AI assistant answer to the logs cleanly
             st.session_state.chat_history.append({"role": "assistant", "content": full_text})
             save_message(st.session_state.login_username, "assistant", full_text)
 
@@ -657,7 +670,7 @@ CONTEXT REFERENCE PACK (USE THIS TO ANSWER WEATHER/NEWS QUERIES):
                 st.markdown(f"👤 **Your Query:** <div class='chat-card'>{display_string}</div>", unsafe_allow_html=True)
                 st.markdown(f"🤖 **OmniCore Response:** <div class='chat-card'>{full_text}</div>", unsafe_allow_html=True)
                 
-            time.sleep(0.6)
+            time.sleep(0.8) # Allow database process locks to fully flush clean
             st.rerun()
             
         except Exception as ex:
