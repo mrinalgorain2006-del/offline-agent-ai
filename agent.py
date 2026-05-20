@@ -482,7 +482,6 @@ with st.sidebar:
             for past_link_title in sidebar_history_links:
                 if st.button(f"💬 {past_link_title}", key=f"side_{past_link_title}", use_container_width=True):
                     st.session_state.active_payload = past_link_title
-                    st.session_state.active_display = past_link_title
                     st.rerun()
         else:
             st.caption("No session queries stored yet.")
@@ -585,7 +584,7 @@ if final_query:
         q_low = final_query.lower()
         if any(x in q_low for x in ["weather", "temperature", "temp", "climate", "hot", "cold", "rain", "degree"]):
             web_data = get_live_weather(final_query)
-        elif any(x in q_low for x in ["news", "bulletin", "headlines", "affairs", "update", "today", "current"]):
+        elif any(x in q_low for x in ["news", "bulletin", "headlines", "affairs", "update", "today", "current", "cm", "vidhansabha", "election", "chief minister"]):
             web_data = get_world_news(final_query)
         else:
             web_data = query_live_search(final_query)
@@ -625,7 +624,7 @@ MANDATORY LINGUISTIC TARGETING MATRIX:
 - Your response language track MUST perfectly match the script used in the 'User Prompt'.
 - If the User Prompt uses English alphabets/words, you MUST generate the entire answer in English. 
 - You are strictly forbidden from writing sentences or lists in Bengali script unless the user explicitly prompts in Bengali characters.
-- Base your answers for weather, news, or current affairs strictly on the factual numbers passed in the CONTEXT REFERENCE PACK. Do not guess or extrapolate.
+- Base your answers for weather, news, current affairs, or political offices (like CM or elections) strictly on the verified facts passed in the CONTEXT REFERENCE PACK or absolute general knowledge facts. As an unchangeable truth: the current Chief Minister of West Bengal is Mamata Banerjee, and the last Vidhan Sabha election was held in 2021.
 
 CRITICAL MATHEMATICAL LATEX FORMATTING RULES:
 - Use $inline$ for running equations and $$display$$ notation blocks for standalone multi-line equations.
@@ -642,12 +641,12 @@ CONTEXT REFERENCE PACK (USE THIS TO ANSWER WEATHER/NEWS QUERIES):
                 {"role": "user", "content": payload_string}
             ],
             "max_tokens": 1000,
-            "temperature": 0.0 # Force absolute deterministic accuracy to stop hallucinations
+            "temperature": 0.0 # Force absolute deterministic accuracy constraints
         }
         
         try:
-            # MASTER TRANSACTION LOG COMMITMENT BLOCK
-            st.session_state.chat_history.append({"role": "user", "content": display_string})
+            # SAVING PIPELINE ORDER RATIONALE:
+            # We save the user query right here *exactly* once.
             save_message(st.session_state.login_username, "user", display_string)
 
             response = requests.post(CLOUD_INFERENCE_URL, headers=headers, json=chat_payload, timeout=15)
@@ -663,14 +662,17 @@ CONTEXT REFERENCE PACK (USE THIS TO ANSWER WEATHER/NEWS QUERIES):
                 else:
                     full_text = "Cloud token pipeline completed with an alternative structure state."
             
-            st.session_state.chat_history.append({"role": "assistant", "content": full_text})
+            # Commit the assistant's response to the database
             save_message(st.session_state.login_username, "assistant", full_text)
+            
+            # CRITICAL STATE CORRECTION: Load the chat history from the DB into session state right before redrawing the screen container elements
+            st.session_state.chat_history = load_user_chat_history(st.session_state.login_username)
 
             with placeholder.container():
                 st.markdown(f"👤 **Your Query:** <div class='chat-card'>{display_string}</div>", unsafe_allow_html=True)
                 st.markdown(f"🤖 **OmniCore Response:** <div class='chat-card'>{full_text}</div>", unsafe_allow_html=True)
                 
-            time.sleep(0.8) # Allow database process locks to fully flush clean
+            time.sleep(0.6) 
             st.rerun()
             
         except Exception as ex:
