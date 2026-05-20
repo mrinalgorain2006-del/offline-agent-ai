@@ -636,10 +636,17 @@ CONTEXT REFERENCE PACK:
             if t_delta > 0 and "full_text" in locals():
                 st.session_state.speed_telemetry = f"{round(len(full_text.split()) / t_delta, 1)} words/sec (Serverless Compute)"
             
-            # Render cleanly into markdown inside the HTML card boundaries
-            placeholder.markdown(f"<div class='chat-card'>{full_text}</div>", unsafe_allow_html=True)
+            # FIXED: Combined viewport render node to show query alongside response box
+            with placeholder.container():
+                st.markdown(f"👤 **Your Query:** <div class='chat-card'>{display_string}</div>", unsafe_allow_html=True)
+                st.markdown(f"🤖 **OmniCore Response:** <div class='chat-card'>{full_text}</div>", unsafe_allow_html=True)
+                
             st.session_state.chat_history.append({"role": "assistant", "content": full_text})
             save_message(st.session_state.login_username, "assistant", full_text)
+            
+            # Instantly refresh parent session to synchronize the sidebar links
+            time.sleep(0.2)
+            st.rerun()
             
         except Exception as ex:
             placeholder.error(f"Cloud Inference Connection Exception: {str(ex)}")
