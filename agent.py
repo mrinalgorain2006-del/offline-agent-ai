@@ -180,7 +180,9 @@ def save_message(username, sender, text):
         conn = get_db_connection()
         cursor = conn.cursor()
         param = "%s" if USING_CLOUD_DB else "?"
-        cursor.execute(f"INSERT INTO logs (username, sender, message_text) VALUES ({param}, {param}, {param})", (username, sender, text))
+        # Force username to lowercase during save to keep matching simple
+        clean_user = str(username).strip().lower()
+        cursor.execute(f"INSERT INTO logs (username, sender, message_text) VALUES ({param}, {param}, {param})", (clean_user, sender, text))
         conn.commit()
         conn.close()
     except Exception:
@@ -192,13 +194,14 @@ def register_user_in_db(uid, pwd):
         conn = get_db_connection()
         cursor = conn.cursor()
         param = "%s" if USING_CLOUD_DB else "?"
+        clean_uid = str(uid).strip().lower()
         
-        cursor.execute(f"SELECT student_uid FROM student_profiles WHERE student_uid = {param}", (uid,))
+        cursor.execute(f"SELECT student_uid FROM student_profiles WHERE LOWER(student_uid) = LOWER({param})", (clean_uid,))
         if cursor.fetchone():
             conn.close()
             return False
             
-        cursor.execute(f"INSERT INTO student_profiles (student_uid, student_pwd, is_active) VALUES ({param}, {param}, 1)", (uid, pwd))
+        cursor.execute(f"INSERT INTO student_profiles (student_uid, student_pwd, is_active) VALUES ({param}, {param}, 1)", (clean_uid, pwd))
         conn.commit()
         conn.close()
         return True
@@ -213,7 +216,8 @@ def validate_user_login_db(uid, pwd):
         conn = get_db_connection()
         cursor = conn.cursor()
         param = "%s" if USING_CLOUD_DB else "?"
-        cursor.execute(f"SELECT student_pwd, is_active FROM student_profiles WHERE student_uid = {param}", (uid,))
+        clean_uid = str(uid).strip().lower()
+        cursor.execute(f"SELECT student_pwd, is_active FROM student_profiles WHERE LOWER(student_uid) = LOWER({param})", (clean_uid,))
         row = cursor.fetchone()
         conn.close()
         if row and row[0] == pwd and int(row[1]) == 1:
@@ -238,7 +242,7 @@ def change_user_status_db(uid, target_status):
         conn = get_db_connection()
         cursor = conn.cursor()
         param = "%s" if USING_CLOUD_DB else "?"
-        cursor.execute(f"UPDATE student_profiles SET is_active = {param} WHERE student_uid = {param}", (target_status, uid))
+        cursor.execute(f"UPDATE student_profiles SET is_active = {param} WHERE LOWER(student_uid) = LOWER({param})", (target_status, str(uid).strip().lower()))
         conn.commit()
         conn.close()
     except Exception:
@@ -249,7 +253,7 @@ def delete_user_from_db(uid):
         conn = get_db_connection()
         cursor = conn.cursor()
         param = "%s" if USING_CLOUD_DB else "?"
-        cursor.execute(f"DELETE FROM student_profiles WHERE student_uid = {param}", (uid,))
+        cursor.execute(f"DELETE FROM student_profiles WHERE LOWER(student_uid) = LOWER({param})", (str(uid).strip().lower(),))
         conn.commit()
         conn.close()
     except Exception:
@@ -271,21 +275,27 @@ def load_user_chat_history(username):
         conn = get_db_connection()
         cursor = conn.cursor()
         param = "%s" if USING_CLOUD_DB else "?"
-        cursor.execute(f"SELECT sender, message_text FROM logs WHERE username = {param} ORDER BY id ASC", (username,))
+        clean_user = str(username).strip().lower()
+        cursor.execute(f"SELECT sender, message_text FROM logs WHERE LOWER(username) = LOWER({param}) ORDER BY id ASC", (clean_user,))
         rows = cursor.fetchall()
         conn.close()
         return [{"role": row[0], "content": row[1]} for row in rows]
     except Exception:
         return []
 
+# FIXED: Case-Insensitive Sidebar Menu Reader Engine
 def get_unique_sidebar_titles(username):
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
         param = "%s" if USING_CLOUD_DB else "?"
-        cursor.execute(f"SELECT message_text FROM logs WHERE username = {param} AND sender='user' ORDER BY id DESC", (username,))
+        clean_user = str(username).strip().lower()
+        
+        # Uses LOWER check to guarantee user queries grab rows regardless of typing casing states
+        cursor.execute(f"SELECT message_text FROM logs WHERE LOWER(username) = LOWER({param}) AND sender='user' ORDER BY id DESC", (clean_user,))
         rows = cursor.fetchall()
         conn.close()
+        
         seen, clean_titles = set(), []
         for r in rows:
             line = r[0].split('\n')[0]
@@ -298,7 +308,6 @@ def get_unique_sidebar_titles(username):
     except Exception:
         return []
 
-# CALLBACK MODULE MECHANISMS
 def callback_clear_session():
     st.session_state.chat_history = []
     st.session_state.active_payload = ""
@@ -329,7 +338,7 @@ def render_login_interface():
             if st.form_submit_button("Unlock Workspace 🚀", use_container_width=True):
                 if validate_user_login_db(u_name.strip(), u_pass.strip()):
                     st.session_state.login_role = "user"
-                    st.session_state.login_username = u_name.strip()
+                    st.session_state.login_username = u_name.strip().lower()
                     st.session_state.chat_history = load_user_chat_history(u_name.strip())
                     st.success("Authorized! Mapping system instance panels...")
                     time.sleep(0.6)
@@ -361,7 +370,7 @@ def render_login_interface():
             if st.form_submit_button("Unlock Root Systems 🔓", use_container_width=True):
                 if a_name == ADMIN_UID and a_pass == ADMIN_PWD:
                     st.session_state.login_role = "admin"
-                    st.session_state.login_username = "SYSTEM_ADMIN"
+                    st.session_state.login_username = "system_admin"
                     st.session_state.chat_history = []
                     st.success("Root access granted! Booting administrator command matrix...")
                     time.sleep(0.6)
@@ -547,8 +556,6 @@ if final_query:
     if uploaded: display_string += f" 📎 (Attached Document File: {uploaded.name})"
     
     payload_string = f"{final_query} {file_context}"
-    st.session_state.chat_history.append({"role": "user", "content": display_string})
-    save_message(st.session_state.login_username, "user", display_string)
     
     with st.chat_message("assistant"):
         placeholder = st.empty()
@@ -620,6 +627,7 @@ CONTEXT REFERENCE PACK:
         }
         
         try:
+            # FIXED POSITION: Append user query and server logs cleanly
             st.session_state.chat_history.append({"role": "user", "content": display_string})
             save_message(st.session_state.login_username, "user", display_string)
 
@@ -636,7 +644,6 @@ CONTEXT REFERENCE PACK:
                 else:
                     full_text = "Cloud token pipeline completed with an alternative structure state."
             
-            # FIXED: Sequential commitment pipeline strategy execution layers
             st.session_state.chat_history.append({"role": "assistant", "content": full_text})
             save_message(st.session_state.login_username, "assistant", full_text)
 
