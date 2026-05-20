@@ -483,7 +483,6 @@ with st.sidebar:
     if st.session_state.login_role in ["user", "admin"]:
         st.markdown("---")
         st.subheader("📋 Recent Sidebar Queries")
-        # EXPLICIT LOCAL CACHE RENDERING LAYERS (Guarantees zero-delete conditions)
         if st.session_state.sidebar_queries:
             for past_link_title in st.session_state.sidebar_queries[:5]:
                 if st.button(f"💬 {past_link_title}", key=f"side_{past_link_title}", use_container_width=True):
@@ -630,10 +629,7 @@ MANDATORY LINGUISTIC TARGETING MATRIX:
 - Your response language track MUST perfectly match the script used in the 'User Prompt'.
 - If the User Prompt uses English alphabets/words, you MUST generate the entire answer in English. 
 - You are strictly forbidden from writing sentences or lists in Bengali script unless the user explicitly prompts in Bengali characters.
-- Base your answers for weather, news, current affairs, or political offices (like CM or elections) strictly on the verified facts passed in the CONTEXT REFERENCE PACK or absolute general knowledge facts. As an unchangeable truth: the current Chief Minister of West Bengal is Mamata Banerjee, and the last Vidhan Sabha election was held in 2021.
-
-CRITICAL MATHEMATICAL LATEX FORMATTING RULES:
-- Use $inline$ for running equations and $$display$$ notation blocks for standalone multi-line equations.
+- Base your answers for weather, news, current affairs, or political offices strictly on the facts passed in the CONTEXT REFERENCE PACK. Do not guess or fallback to outdated pre-trained history data templates.
 
 CONTEXT REFERENCE PACK (USE THIS TO ANSWER WEATHER/NEWS QUERIES):
 {web_data}
@@ -651,14 +647,7 @@ CONTEXT REFERENCE PACK (USE THIS TO ANSWER WEATHER/NEWS QUERIES):
         }
         
         try:
-            # INSTANT MEMORY LAYER ASSIGNMENT:
-            # We inject the prompt cleanly into the local arrays immediately so the sidebar catches it 100% of the time!
-            short_line = display_string.split('\n')[0]
-            if len(short_line) > 24: short_line = short_line[:22] + "..."
-            if short_line not in st.session_state.sidebar_queries:
-                st.session_state.sidebar_queries.insert(0, short_line)
-
-            # Fire off background thread tasks to commit back up to Neon Cloud
+            # FIXED POSITION LOGGING PIPELINE MATRIX
             save_message(st.session_state.login_username, "user", display_string)
 
             response = requests.post(CLOUD_INFERENCE_URL, headers=headers, json=chat_payload, timeout=15)
@@ -675,7 +664,10 @@ CONTEXT REFERENCE PACK (USE THIS TO ANSWER WEATHER/NEWS QUERIES):
                     full_text = "Cloud token pipeline completed with an alternative structure state."
             
             save_message(st.session_state.login_username, "assistant", full_text)
+            
+            # CORE FIX: We load both chat logs AND the verified unique list items safely back into memory blocks before drawing views
             st.session_state.chat_history = load_user_chat_history(st.session_state.login_username)
+            st.session_state.sidebar_queries = get_unique_sidebar_titles(st.session_state.login_username)
 
             with placeholder.container():
                 st.markdown(f"👤 **Your Query:** <div class='chat-card'>{display_string}</div>", unsafe_allow_html=True)
