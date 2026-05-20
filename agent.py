@@ -184,7 +184,7 @@ if not st.session_state.login_authenticated:
 # =====================================================================
 #  2. HYBRID STORAGE BACKEND (POSTGRESQL OR SQLITE ROUTER)
 # =====================================================================
-if st.session_state.is_online and NEON_DATABASE_URL and NEON_DATABASE_URL != "YOUR_NEON_CONNECTION_STRING_HERE":
+if st.session_state.is_online and NEON_DATABASE_URL and NEON_DATABASE_URL != "postgresql://neondb_owner:npg_cOan5sF7yRTU@ep-long-lake-aolrehwr.c-2.ap-southeast-1.aws.neon.tech/neondb?sslmode=require":
     import psycopg2
     from psycopg2.extras import DictCursor
     USING_CLOUD_DB = True
