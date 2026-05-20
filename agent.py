@@ -82,21 +82,30 @@ st.markdown("""
         -webkit-text-fill-color: #0f172a !important;
     }
 
-    /* 5. TEAM CARD CONTAINER DECORATORS WITH PREMIUM LEFT ACCENT BARS */
+    /* 5. TEAM CARD CONTAINER DECORATORS WITH REINFORCED TYPOGRAPHY */
     .team-box { 
-        background-color: #f1f5f9 !important; 
+        background-color: #f8fafc !important; 
         border: 1px solid #e2e8f0 !important; 
-        padding: 14px !important; 
+        padding: 12px 14px !important; 
         border-radius: 12px !important; 
-        margin-bottom: 8px !important; 
+        margin-bottom: 10px !important; 
+        box-shadow: 0 1px 3px rgba(0,0,0,0.02) !important;
     }
     
     .team-box b, .team-box small {
-        -webkit-text-fill-color: initial !important; /* Disables the global override */
+        -webkit-text-fill-color: initial !important; 
+        display: inline-block !important;
     }
 
     /* 6. COMPONENT CARDS AND SUBMISSION BUTTONS */
-    .chat-card { background-color: #f8fafc; border: 1px solid #e2e8f0; padding: 16px; border-radius: 16px; margin-bottom: 10px; }
+    .chat-card { 
+        background-color: #f8fafc; 
+        border: 1px solid #e2e8f0; 
+        padding: 18px; 
+        border-radius: 16px; 
+        margin-bottom: 10px; 
+        line-height: 1.6;
+    }
     div[data-testid="stSidebar"] button, div[data-testid="stHorizontalBlock"] button {
         background-color: #f1f5f9 !important;
         border: 1px solid #e2e8f0 !important;
@@ -108,13 +117,13 @@ st.markdown("""
     }
     div[data-testid="stForm"] { border: none !important; padding: 0px !important; box-shadow: none !important; }
     
-    /* 7. CUSTOM REINFORCEMENT LEARNING PILLS SCALER */
+    /* 7. FEEDBACK LAYOUT CONTROL */
     .feedback-container { display: flex; gap: 10px; margin-top: -8px; margin-bottom: 12px; padding-left: 5px; }
     </style>
 """, unsafe_allow_html=True)
 
 # =====================================================================
-#  🏛️ CORE SYSTEM COMPONENT CHANNELS (THE 10 ALIGNED FUNCTIONS)
+#  🏛️ CORE SYSTEM COMPONENT CHANNELS
 # =====================================================================
 SQLITE_DB_FILE = "chat_history.db"
 NEON_DATABASE_URL = "postgresql://neondb_owner:npg_cOan5sF7yRTU@ep-long-lake-aolrehwr.c-2.ap-southeast-1.aws.neon.tech/neondb?sslmode=require"
@@ -132,13 +141,11 @@ try:
 except ImportError:
     USING_CLOUD_DB = False
 
-# FUNCTION 1: Thread Pool Target Database Connection Gateway Selector
 def get_db_connection():
     if USING_CLOUD_DB:
         return psycopg2.connect(NEON_DATABASE_URL, sslmode="require")
     return sqlite3.connect(SQLITE_DB_FILE)
 
-# FUNCTION 2: Relational Cloud Infrastructure Schema Instantiation Module
 def init_db():
     conn = get_db_connection()
     cursor = conn.cursor()
@@ -151,7 +158,6 @@ def init_db():
     conn.commit()
     conn.close()
 
-# FUNCTION 3: Secure Auditable Sync Dialogue Log Appender 
 def save_message(username, sender, text):
     try:
         conn = get_db_connection()
@@ -163,7 +169,6 @@ def save_message(username, sender, text):
     except Exception:
         pass
 
-# FUNCTION 4: Academic Registration Transaction Dispatcher
 def register_user_in_db(uid, pwd):
     try:
         conn = get_db_connection()
@@ -176,7 +181,6 @@ def register_user_in_db(uid, pwd):
     except Exception:
         return False
 
-# FUNCTION 5: Identity Encryption Validation Interceptor
 def validate_user_login_db(uid, pwd):
     try:
         conn = get_db_connection()
@@ -191,7 +195,6 @@ def validate_user_login_db(uid, pwd):
     except Exception:
         return False
 
-# FUNCTION 6: System Administration Registry Scanner Matrix (ID Access ONLY)
 def fetch_all_users_raw():
     try:
         conn = get_db_connection()
@@ -203,7 +206,6 @@ def fetch_all_users_raw():
     except Exception:
         return []
 
-# FUNCTION 7: Hardware Access Token Revocation Controller
 def change_user_status_db(uid, target_status):
     try:
         conn = get_db_connection()
@@ -215,7 +217,6 @@ def change_user_status_db(uid, target_status):
     except Exception:
         pass
 
-# FUNCTION 7B: Delete User Target Function
 def delete_user_from_db(uid):
     try:
         conn = get_db_connection()
@@ -227,7 +228,6 @@ def delete_user_from_db(uid):
     except Exception:
         pass
 
-# FUNCTION 8: Reinforcement Learning Reward Array Committer
 def save_rl_feedback(prompt, response, score):
     try:
         conn = get_db_connection()
@@ -239,7 +239,6 @@ def save_rl_feedback(prompt, response, score):
     except Exception:
         pass
 
-# FUNCTION 9: Historical Chat Buffer Back-Log Sync Module
 def load_user_chat_history(username):
     try:
         conn = get_db_connection()
@@ -252,7 +251,6 @@ def load_user_chat_history(username):
     except Exception:
         return []
 
-# FUNCTION 10: Dynamic Deduplicated Query Index Compactor
 def get_unique_sidebar_titles(username):
     try:
         conn = get_db_connection()
@@ -284,27 +282,28 @@ def render_login_interface():
     st.markdown("<h1 style='text-align: center; font-weight: 900; background: linear-gradient(135deg, #4a90e2, #ff7e5f); -webkit-background-clip: text; -webkit-text-fill-color: transparent;'>⚡ Offline Agent.Ai</h1>", unsafe_allow_html=True)
     st.markdown("<p style='text-align: center; margin-top: -10px; font-weight: 600;'>Multimodal Smart Space Framework</p>", unsafe_allow_html=True)
     
-    tab_login, tab_signup, tab_admin = st.tabs(["👤 Student Login", "📝 Create Student Account", "🔒 Administrator Dashboard"])
+    # REFIXED: User Authentication Terminology Mapping
+    tab_login, tab_signup, tab_admin = st.tabs(["👤 User Login", "📝 Create User Account", "🔒 Administrator Dashboard"])
     
     with tab_login:
         with st.form("student_login_form"):
-            u_name = st.text_input("Student User ID Identification", placeholder="Type registered username...")
+            u_name = st.text_input("User ID Identification", placeholder="Type registered username...")
             u_pass = st.text_input("Workspace Security Key", type="password", placeholder="Type account password...")
             if st.form_submit_button("Unlock Workspace 🚀", use_container_width=True):
                 if validate_user_login_db(u_name.strip(), u_pass.strip()):
                     st.session_state.login_role = "user"
                     st.session_state.login_username = u_name.strip()
                     st.session_state.chat_history = load_user_chat_history(u_name.strip())
-                    st.success("Authorized! Mapping student instance panels...")
+                    st.success("Authorized! Mapping system instance panels...")
                     time.sleep(0.6)
                     st.rerun()
                 else:
                     st.error("❌ Access Denied: Invalid credentials or account deactivated by Admin.")
                     
     with tab_signup:
-        st.caption("Register your unique credentials to configure a secure student profile:")
+        st.caption("Register your unique credentials to configure a secure user profile:")
         with st.form("student_signup_form"):
-            new_uid = st.text_input("Choose Unique Student User ID", placeholder="e.g., pramik_cst")
+            new_uid = st.text_input("Choose Unique User ID", placeholder="e.g., gouranga_cst")
             new_pwd = st.text_input("Set Secure Account Password", type="password", placeholder="Minimum 6 characters recommended...")
             confirm_pwd = st.text_input("Confirm Account Password", type="password", placeholder="Retype your chosen password...")
             if st.form_submit_button("Register Account Infrastructure 💾", use_container_width=True):
@@ -314,7 +313,7 @@ def render_login_interface():
                     st.error("Password confirmation keys do not match.")
                 else:
                     if register_user_in_db(new_uid.strip(), new_pwd.strip()):
-                        st.success("🎉 Account committed successfully! Switch to the Student Login tab to access your workspace.")
+                        st.success("🎉 Account committed successfully! Switch to the User Login tab to access your workspace.")
                     else:
                         st.error("⚠️ Username token already exists in system records.")
                         
@@ -379,7 +378,6 @@ with st.sidebar:
     st.markdown("---")
     cfg_tone = st.selectbox("🎭 Engine Persona Matrix", ["Standard Agent", "Expert Professor", "Code Auditor", "Brief Summary Node"])
     
-    # ADVANCED WORKER ADMIN ROSTER INTERFACE
     if st.session_state.login_role == "admin":
         st.markdown("---")
         st.subheader("👥 Registered User Status Node")
@@ -409,7 +407,7 @@ with st.sidebar:
                         st.rerun()
                 st.markdown("<hr style='margin: 4px 0px; border-color: #cbd5e1;' />", unsafe_allow_html=True)
         else:
-            st.caption("Zero student accounts registered.")
+            st.caption("Zero accounts registered.")
             
     if st.session_state.login_role in ["user", "admin"]:
         st.markdown("---")
@@ -425,19 +423,19 @@ with st.sidebar:
             st.caption("No session queries stored yet.")
             
     st.markdown("---")
-    # HIGH-CONTRAST LEFT-ACCENT BAR PREMIUM UI DEVELOPER ROSTER DECK
-    st.subheader("🛠| Project Architecture Deck")
+    # REFIXED: Clean Premium UI Header Component Without Raw Divider Marks
+    st.subheader("📋 Project Architecture Deck")
     st.markdown("""
         <div class='team-box' style='border-left: 5px solid #4a90e2 !important;'>
-            <b style='color: #4a90e2 !important; font-size: 15px;'>Mrinal Gorain</b><br>
+            <b style='color: #4a90e2 !important; font-size: 14px;'>Mrinal Gorain</b><br>
             <small style='color: #475569 !important; font-weight: 600;'>Lead Developer & Systems Architect</small>
         </div>
         <div class='team-box' style='border-left: 5px solid #2ecc71 !important;'>
-            <b style='color: #2ecc71 !important; font-size: 15px;'>Prami Hazra & Sanchari Choudhury</b><br>
+            <b style='color: #2ecc71 !important; font-size: 14px;'>Prami Hazra & Sanchari Choudhury</b><br>
             <small style='color: #475569 !important; font-weight: 600;'>Documentation & Reports</small>
         </div>
         <div class='team-box' style='border-left: 5px solid #e67e22 !important;'>
-            <b style='color: #e67e22 !important; font-size: 15px;'>Mainak Mukherjee & Manas Banerjee</b><br>
+            <b style='color: #e67e22 !important; font-size: 14px;'>Mainak Mukherjee & Manas Banerjee</b><br>
             <small style='color: #475569 !important; font-weight: 600;'>System Evaluation Arrays</small>
         </div>
     """, unsafe_allow_html=True)
@@ -499,7 +497,7 @@ with col_mic:
     st.markdown("**🎙️ Record Audio Voice Prompts**")
     mic_transcription = speech_to_text(start_prompt="Record Voice 🎙️", stop_prompt="Halt 🟥", language="en", just_once=True)
 
-# Centralized Search Container Interface (Default Input Routing Language: English)
+# Centralized Search Container Interface 
 with st.form("central_agent_search_boundary", clear_on_submit=True):
     col_field, col_btn = st.columns([10.0, 2.0])
     with col_field:
@@ -527,8 +525,6 @@ if final_query:
     
     with st.chat_message("assistant"):
         placeholder = st.empty()
-        
-        # REQUIRED 10: Clean Thinking placeholder without showing HTML card boundaries early
         placeholder.markdown("🧠 **Thinking... accessing serverless cloud layers... [0% local system load matching]**")
         
         # Run Real-Time RAG Extraction Tools
@@ -541,16 +537,18 @@ if final_query:
         else:
             web_data = query_live_search(final_query)
             
+        # REFIXED: Isolated system role constraints to resolve linguistic leaking loops
         rules = f"""You are the premium cloud-offloaded intelligence layer of 'Offline.Ai', built by Mrinal Gorain from Nalhati Government Polytechnic, CST department.
 Project portfolio documentation was compiled by Prami Hazra and Sanchari Choudhury.
 Persona Setting: {cfg_tone}
-Default Interface Language: English.
+
+MANDATORY LINGUISTIC TARGETING MATRIX:
+- Your response language track MUST perfectly match the script used in the 'User Prompt'.
+- If the User Prompt uses English alphabets/words, you MUST generate the entire answer in English. 
+- You are strictly forbidden from writing sentences or lists in Bengali script unless the user explicitly prompts in Bengali characters.
 
 CRITICAL MATHEMATICAL LATEX FORMATTING RULES:
 - Use $inline$ for running equations and $$display$$ notation blocks for standalone multi-line equations.
-
-CRITICAL REGIONAL LANGUAGE SCRIPTS DIRECTIVE:
-- If user uses Bengali, reply in BENGALI SCRIPT (বাংলা হরফ). If Hindi, reply in HINDI SCRIPT (देवनागरी).
 
 CONTEXT REFERENCE PACK:
 {web_data}
@@ -563,8 +561,8 @@ CONTEXT REFERENCE PACK:
                 {"role": "system", "content": rules},
                 {"role": "user", "content": payload_string}
             ],
-            "max_tokens": 600,
-            "temperature": 0.2
+            "max_tokens": 1000,  # Expanded context margin to eliminate unfinished element list cuts
+            "temperature": 0.1
         }
         
         try:
@@ -586,7 +584,7 @@ CONTEXT REFERENCE PACK:
             if t_delta > 0 and "full_text" in locals():
                 st.session_state.speed_telemetry = f"{round(len(full_text.split()) / t_delta, 1)} words/sec (Serverless Compute)"
             
-            # Switch back to UI components and append history streams
+            # Render cleanly into markdown inside the HTML card boundaries
             placeholder.markdown(f"<div class='chat-card'>{full_text}</div>", unsafe_allow_html=True)
             st.session_state.chat_history.append({"role": "assistant", "content": full_text})
             save_message(st.session_state.login_username, "assistant", full_text)
