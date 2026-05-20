@@ -298,6 +298,18 @@ def get_unique_sidebar_titles(username):
     except Exception:
         return []
 
+# CALLBACK FUNCTION 1: Instant Layout Reset
+def callback_clear_session():
+    st.session_state.chat_history = []
+    st.session_state.active_payload = ""
+    st.session_state.active_display = ""
+
+# CALLBACK FUNCTION 2: Permanent Instant System Logout Core Gateway
+def callback_system_logout():
+    st.session_state.login_role = None
+    st.session_state.login_username = None
+    st.session_state.chat_history = []
+
 init_db()
 
 # =====================================================================
@@ -466,17 +478,9 @@ with st.sidebar:
     """, unsafe_allow_html=True)
     
     st.markdown("---")
-    if st.button("Initialize Fresh Session Layout", use_container_width=True):
-        st.session_state.chat_history = []
-        st.session_state.active_payload = ""
-        st.session_state.active_display = ""
-        st.rerun()
-
-    if st.button("Log Out and Exit System", use_container_width=True):
-        st.session_state.login_role = None
-        st.session_state.login_username = None
-        st.session_state.chat_history = []
-        st.rerun()
+    # REFIXED: Added immediate execution state callbacks to eliminate navigation lag conditions
+    st.button("Initialize Fresh Session Layout", use_container_width=True, on_click=callback_clear_session)
+    st.button("Log Out and Exit System", use_container_width=True, on_click=callback_system_logout)
 
 # =====================================================================
 #  💬 MAIN CONSOLE VIEWPORT ENGINE
@@ -636,7 +640,7 @@ CONTEXT REFERENCE PACK:
             if t_delta > 0 and "full_text" in locals():
                 st.session_state.speed_telemetry = f"{round(len(full_text.split()) / t_delta, 1)} words/sec (Serverless Compute)"
             
-            # FIXED: Combined viewport render node to show query alongside response box
+            # Fixed viewport render node
             with placeholder.container():
                 st.markdown(f"👤 **Your Query:** <div class='chat-card'>{display_string}</div>", unsafe_allow_html=True)
                 st.markdown(f"🤖 **OmniCore Response:** <div class='chat-card'>{full_text}</div>", unsafe_allow_html=True)
@@ -644,7 +648,6 @@ CONTEXT REFERENCE PACK:
             st.session_state.chat_history.append({"role": "assistant", "content": full_text})
             save_message(st.session_state.login_username, "assistant", full_text)
             
-            # Instantly refresh parent session to synchronize the sidebar links
             time.sleep(0.2)
             st.rerun()
             
