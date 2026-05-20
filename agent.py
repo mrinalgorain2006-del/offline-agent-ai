@@ -116,12 +116,12 @@ st.markdown("""
 # =====================================================================
 #  1. CLOUD STORAGE ROUTER & PERSISTENT DATA SCHEMA (NEON ENVIRONMENT)
 # =====================================================================
+#  NEW HIGH-PERFORMANCE PROXY GLOBAL ROUTING LINK
 SQLITE_DB_FILE = "chat_history.db"
 NEON_DATABASE_URL = "postgresql://neondb_owner:npg_cOan5sF7yRTU@ep-long-lake-aolrehwr.c-2.ap-southeast-1.aws.neon.tech/neondb?sslmode=require"
 
-# Serverless Cloud Inference Configuration Layer
-CLOUD_INFERENCE_URL = "https://api-inference.huggingface.co/models/meta-llama/Meta-Llama-3-8B-Instruct"
-
+# Serverless Cloud Inference Configuration Layer (Updated Routing Gateway)
+CLOUD_INFERENCE_URL = "https://router.huggingface.co/v1/models/meta-llama/Meta-Llama-3-8B-Instruct"
 if "CLOUD_API_KEY" in st.secrets:
     CLOUD_API_KEY = st.secrets["CLOUD_API_KEY"]
 else:
