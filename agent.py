@@ -82,20 +82,37 @@ st.markdown("""
         -webkit-text-fill-color: #0f172a !important;
     }
 
-    /* 5. TEAM CARD CONTAINER DECORATORS WITH REINFORCED TYPOGRAPHY */
-    .team-box { 
+    /* 5. EXTRA-PREMIUM VISUAL TEAM CARD ACCENTS */
+    .team-box-blue { 
         background-color: #f8fafc !important; 
-        border: 1px solid #e2e8f0 !important; 
+        border: 1px solid #e2e8f0 !important;
+        border-left: 5px solid #3b82f6 !important;
         padding: 12px 14px !important; 
-        border-radius: 12px !important; 
+        border-radius: 8px !important; 
+        margin-bottom: 10px !important; 
+        box-shadow: 0 1px 3px rgba(0,0,0,0.02) !important;
+    }
+    .team-box-green { 
+        background-color: #f8fafc !important; 
+        border: 1px solid #e2e8f0 !important;
+        border-left: 5px solid #10b981 !important;
+        padding: 12px 14px !important; 
+        border-radius: 8px !important; 
+        margin-bottom: 10px !important; 
+        box-shadow: 0 1px 3px rgba(0,0,0,0.02) !important;
+    }
+    .team-box-orange { 
+        background-color: #f8fafc !important; 
+        border: 1px solid #e2e8f0 !important;
+        border-left: 5px solid #f97316 !important;
+        padding: 12px 14px !important; 
+        border-radius: 8px !important; 
         margin-bottom: 10px !important; 
         box-shadow: 0 1px 3px rgba(0,0,0,0.02) !important;
     }
     
-    .team-box b, .team-box small {
-        -webkit-text-fill-color: initial !important; 
-        display: inline-block !important;
-    }
+    .team-box-blue b, .team-box-green b, .team-box-orange b { font-size: 14px !important; color: #0f172a !important; }
+    .team-box-blue small, .team-box-green small, .team-box-orange small { color: #64748b !important; font-weight: 500 !important; }
 
     /* 6. COMPONENT CARDS AND SUBMISSION BUTTONS */
     .chat-card { 
@@ -169,16 +186,28 @@ def save_message(username, sender, text):
     except Exception:
         pass
 
+# FIXED SIGNUP INFRASTRUCTURE FUNCTION
 def register_user_in_db(uid, pwd):
+    conn = None
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
         param = "%s" if USING_CLOUD_DB else "?"
+        
+        # Check if record already exists first natively to avoid primary constraint crash loops
+        cursor.execute(f"SELECT student_uid FROM student_profiles WHERE student_uid = {param}", (uid,))
+        if cursor.fetchone():
+            conn.close()
+            return False
+            
         cursor.execute(f"INSERT INTO student_profiles (student_uid, student_pwd, is_active) VALUES ({param}, {param}, 1)", (uid, pwd))
         conn.commit()
         conn.close()
         return True
-    except Exception:
+    except Exception as e:
+        if conn:
+            try: conn.close()
+            except: pass
         return False
 
 def validate_user_login_db(uid, pwd):
@@ -282,7 +311,6 @@ def render_login_interface():
     st.markdown("<h1 style='text-align: center; font-weight: 900; background: linear-gradient(135deg, #4a90e2, #ff7e5f); -webkit-background-clip: text; -webkit-text-fill-color: transparent;'>⚡ Offline Agent.Ai</h1>", unsafe_allow_html=True)
     st.markdown("<p style='text-align: center; margin-top: -10px; font-weight: 600;'>Multimodal Smart Space Framework</p>", unsafe_allow_html=True)
     
-    # REFIXED: User Authentication Terminology Mapping
     tab_login, tab_signup, tab_admin = st.tabs(["👤 User Login", "📝 Create User Account", "🔒 Administrator Dashboard"])
     
     with tab_login:
@@ -315,7 +343,7 @@ def render_login_interface():
                     if register_user_in_db(new_uid.strip(), new_pwd.strip()):
                         st.success("🎉 Account committed successfully! Switch to the User Login tab to access your workspace.")
                     else:
-                        st.error("⚠️ Username token already exists in system records.")
+                        st.error("⚠️ Username token already exists in database system records.")
                         
     with tab_admin:
         with st.form("admin_login_form"):
@@ -423,20 +451,20 @@ with st.sidebar:
             st.caption("No session queries stored yet.")
             
     st.markdown("---")
-    # REFIXED: Clean Premium UI Header Component Without Raw Divider Marks
     st.subheader("📋 Project Architecture Deck")
+    # UPDATED: Premium Colored Left Accent Bands UI Layout Integration
     st.markdown("""
-        <div class='team-box' style='border-left: 5px solid #4a90e2 !important;'>
-            <b style='color: #4a90e2 !important; font-size: 14px;'>Mrinal Gorain</b><br>
-            <small style='color: #475569 !important; font-weight: 600;'>Lead Developer & Systems Architect</small>
+        <div class='team-box-blue'>
+            <b>Mrinal Gorain</b><br>
+            <small>Lead Developer & Systems Architect</small>
         </div>
-        <div class='team-box' style='border-left: 5px solid #2ecc71 !important;'>
-            <b style='color: #2ecc71 !important; font-size: 14px;'>Prami Hazra & Sanchari Choudhury</b><br>
-            <small style='color: #475569 !important; font-weight: 600;'>Documentation & Reports</small>
+        <div class='team-box-green'>
+            <b>Prami Hazra & Sanchari Choudhury</b><br>
+            <small>Documentation & Reports</small>
         </div>
-        <div class='team-box' style='border-left: 5px solid #e67e22 !important;'>
-            <b style='color: #e67e22 !important; font-size: 14px;'>Mainak Mukherjee & Manas Banerjee</b><br>
-            <small style='color: #475569 !important; font-weight: 600;'>System Evaluation Arrays</small>
+        <div class='team-box-orange'>
+            <b>Mainak Mukherjee & Manas Banerjee</b><br>
+            <small>System Evaluation Arrays</small>
         </div>
     """, unsafe_allow_html=True)
     
@@ -537,7 +565,6 @@ if final_query:
         else:
             web_data = query_live_search(final_query)
             
-        # REFIXED: Isolated system role constraints to resolve linguistic leaking loops
         rules = f"""You are the premium cloud-offloaded intelligence layer of 'Offline.Ai', built by Mrinal Gorain from Nalhati Government Polytechnic, CST department.
 Project portfolio documentation was compiled by Prami Hazra and Sanchari Choudhury.
 Persona Setting: {cfg_tone}
@@ -561,7 +588,7 @@ CONTEXT REFERENCE PACK:
                 {"role": "system", "content": rules},
                 {"role": "user", "content": payload_string}
             ],
-            "max_tokens": 1000,  # Expanded context margin to eliminate unfinished element list cuts
+            "max_tokens": 1000,
             "temperature": 0.1
         }
         
