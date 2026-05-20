@@ -296,7 +296,7 @@ def load_user_chat_history(username):
     except Exception:
         return []
 
-# FIXED: Integrated Strict 1-Hour Time-Delta Filter Condition
+# ENFORCED TIME FILTER: Sets an explicit 1-hour hide period on recent list updates
 def get_unique_sidebar_titles(username):
     try:
         conn = get_db_connection()
@@ -645,7 +645,7 @@ MANDATORY LINGUISTIC TARGETING MATRIX:
 - Your response language track MUST perfectly match the script used in the 'User Prompt'.
 - If the User Prompt uses English alphabets/words, you MUST generate the entire answer in English. 
 - You are strictly forbidden from writing sentences or lists in Bengali script unless the user explicitly prompts in Bengali characters.
-- Base your answers for weather, news, or regional current affairs strictly on the fresh telemetry passed inside the CONTEXT REFERENCE PACK below. Do not guess or extrapolate using outdated pre-trained memory vectors.
+- Base your answers for weather, news, or current affairs strictly on the verified numbers passed inside the CONTEXT REFERENCE PACK. Do not guess or fallback to historical data vectors.
 
 CONTEXT REFERENCE PACK (USE THIS TO ANSWER WEATHER/NEWS QUERIES):
 {web_data}
@@ -663,7 +663,7 @@ CONTEXT REFERENCE PACK (USE THIS TO ANSWER WEATHER/NEWS QUERIES):
         }
         
         try:
-            # Save User message exactly once
+            # Save user prompt query history exactly once inside cloud infrastructure tables
             save_message(st.session_state.login_username, "user", display_string)
 
             response = requests.post(CLOUD_INFERENCE_URL, headers=headers, json=chat_payload, timeout=15)
@@ -679,18 +679,24 @@ CONTEXT REFERENCE PACK (USE THIS TO ANSWER WEATHER/NEWS QUERIES):
                 else:
                     full_text = "Cloud token pipeline completed with an alternative structure state."
             
-            # Save Assistant response exactly once
+            # Commit the matching assistant answer block to the background logs
             save_message(st.session_state.login_username, "assistant", full_text)
             
-            # Update Chat Log views dynamically
-            st.session_state.chat_history = load_user_chat_history(st.session_state.login_username)
-            st.session_state.sidebar_queries = get_unique_sidebar_titles(st.session_state.login_username)
+            #  FIXED ENGINE LAYER ENTRY: Local state array appending bypasses all network query lag 
+            st.session_state.chat_history.append({"role": "user", "content": display_string})
+            st.session_state.chat_history.append({"role": "assistant", "content": full_text})
+            
+            # Quietly try to fetch standard historical time blocks
+            try:
+                st.session_state.sidebar_queries = get_unique_sidebar_titles(st.session_state.login_username)
+            except:
+                pass
 
             with placeholder.container():
                 st.markdown(f"👤 **Your Query:** <div class='chat-card'>{display_string}</div>", unsafe_allow_html=True)
                 st.markdown(f"🤖 **OmniCore Response:** <div class='chat-card'>{full_text}</div>", unsafe_allow_html=True)
                 
-            time.sleep(0.4) 
+            time.sleep(0.2) 
             st.rerun()
             
         except Exception as ex:
