@@ -32,6 +32,8 @@ if "login_username" not in st.session_state:
     st.session_state.login_username = None
 if "chat_history" not in st.session_state:
     st.session_state.chat_history = []
+if "sidebar_queries" not in st.session_state:
+    st.session_state.sidebar_queries = []
 if "active_payload" not in st.session_state:
     st.session_state.active_payload = ""
 if "active_display" not in st.session_state:
@@ -320,6 +322,7 @@ def get_unique_sidebar_titles(username):
 
 def callback_clear_session():
     st.session_state.chat_history = []
+    st.session_state.sidebar_queries = []
     st.session_state.active_payload = ""
     st.session_state.active_display = ""
 
@@ -327,6 +330,7 @@ def callback_system_logout():
     st.session_state.login_role = None
     st.session_state.login_username = None
     st.session_state.chat_history = []
+    st.session_state.sidebar_queries = []
 
 init_db()
 
@@ -350,6 +354,7 @@ def render_login_interface():
                     st.session_state.login_role = "user"
                     st.session_state.login_username = u_name.strip().lower()
                     st.session_state.chat_history = load_user_chat_history(u_name.strip())
+                    st.session_state.sidebar_queries = get_unique_sidebar_titles(u_name.strip())
                     st.success("Authorized! Mapping system instance panels...")
                     time.sleep(0.6)
                     st.rerun()
@@ -382,6 +387,7 @@ def render_login_interface():
                     st.session_state.login_role = "admin"
                     st.session_state.login_username = "system_admin"
                     st.session_state.chat_history = []
+                    st.session_state.sidebar_queries = get_unique_sidebar_titles("system_admin")
                     st.success("Root access granted! Booting administrator command matrix...")
                     time.sleep(0.6)
                     st.rerun()
@@ -477,9 +483,9 @@ with st.sidebar:
     if st.session_state.login_role in ["user", "admin"]:
         st.markdown("---")
         st.subheader("📋 Recent Sidebar Queries")
-        sidebar_history_links = get_unique_sidebar_titles(st.session_state.login_username)
-        if sidebar_history_links:
-            for past_link_title in sidebar_history_links:
+        # EXPLICIT LOCAL CACHE RENDERING LAYERS (Guarantees zero-delete conditions)
+        if st.session_state.sidebar_queries:
+            for past_link_title in st.session_state.sidebar_queries[:5]:
                 if st.button(f"💬 {past_link_title}", key=f"side_{past_link_title}", use_container_width=True):
                     st.session_state.active_payload = past_link_title
                     st.rerun()
@@ -645,8 +651,14 @@ CONTEXT REFERENCE PACK (USE THIS TO ANSWER WEATHER/NEWS QUERIES):
         }
         
         try:
-            # SAVING PIPELINE ORDER RATIONALE:
-            # We save the user query right here *exactly* once.
+            # INSTANT MEMORY LAYER ASSIGNMENT:
+            # We inject the prompt cleanly into the local arrays immediately so the sidebar catches it 100% of the time!
+            short_line = display_string.split('\n')[0]
+            if len(short_line) > 24: short_line = short_line[:22] + "..."
+            if short_line not in st.session_state.sidebar_queries:
+                st.session_state.sidebar_queries.insert(0, short_line)
+
+            # Fire off background thread tasks to commit back up to Neon Cloud
             save_message(st.session_state.login_username, "user", display_string)
 
             response = requests.post(CLOUD_INFERENCE_URL, headers=headers, json=chat_payload, timeout=15)
@@ -662,17 +674,14 @@ CONTEXT REFERENCE PACK (USE THIS TO ANSWER WEATHER/NEWS QUERIES):
                 else:
                     full_text = "Cloud token pipeline completed with an alternative structure state."
             
-            # Commit the assistant's response to the database
             save_message(st.session_state.login_username, "assistant", full_text)
-            
-            # CRITICAL STATE CORRECTION: Load the chat history from the DB into session state right before redrawing the screen container elements
             st.session_state.chat_history = load_user_chat_history(st.session_state.login_username)
 
             with placeholder.container():
                 st.markdown(f"👤 **Your Query:** <div class='chat-card'>{display_string}</div>", unsafe_allow_html=True)
                 st.markdown(f"🤖 **OmniCore Response:** <div class='chat-card'>{full_text}</div>", unsafe_allow_html=True)
                 
-            time.sleep(0.6) 
+            time.sleep(0.4) 
             st.rerun()
             
         except Exception as ex:
