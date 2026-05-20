@@ -298,13 +298,12 @@ def get_unique_sidebar_titles(username):
     except Exception:
         return []
 
-# CALLBACK FUNCTION 1: Instant Layout Reset
+# CALLBACK MODULE MECHANISMS
 def callback_clear_session():
     st.session_state.chat_history = []
     st.session_state.active_payload = ""
     st.session_state.active_display = ""
 
-# CALLBACK FUNCTION 2: Permanent Instant System Logout Core Gateway
 def callback_system_logout():
     st.session_state.login_role = None
     st.session_state.login_username = None
@@ -478,7 +477,6 @@ with st.sidebar:
     """, unsafe_allow_html=True)
     
     st.markdown("---")
-    # REFIXED: Added immediate execution state callbacks to eliminate navigation lag conditions
     st.button("Initialize Fresh Session Layout", use_container_width=True, on_click=callback_clear_session)
     st.button("Log Out and Exit System", use_container_width=True, on_click=callback_system_logout)
 
@@ -622,9 +620,10 @@ CONTEXT REFERENCE PACK:
         }
         
         try:
-            t_start = time.time()
+            st.session_state.chat_history.append({"role": "user", "content": display_string})
+            save_message(st.session_state.login_username, "user", display_string)
+
             response = requests.post(CLOUD_INFERENCE_URL, headers=headers, json=chat_payload, timeout=15)
-            t_delta = time.time() - t_start
             
             if not response.text.strip():
                 full_text = "Serverless pipeline returned an empty response stream. Please re-trigger the query engine."
@@ -636,19 +635,16 @@ CONTEXT REFERENCE PACK:
                     full_text = f"Inference Routing Layer Notice: {res_json['error'].get('message', res_json['error'])}"
                 else:
                     full_text = "Cloud token pipeline completed with an alternative structure state."
-                    
-            if t_delta > 0 and "full_text" in locals():
-                st.session_state.speed_telemetry = f"{round(len(full_text.split()) / t_delta, 1)} words/sec (Serverless Compute)"
             
-            # Fixed viewport render node
+            # FIXED: Sequential commitment pipeline strategy execution layers
+            st.session_state.chat_history.append({"role": "assistant", "content": full_text})
+            save_message(st.session_state.login_username, "assistant", full_text)
+
             with placeholder.container():
                 st.markdown(f"👤 **Your Query:** <div class='chat-card'>{display_string}</div>", unsafe_allow_html=True)
                 st.markdown(f"🤖 **OmniCore Response:** <div class='chat-card'>{full_text}</div>", unsafe_allow_html=True)
                 
-            st.session_state.chat_history.append({"role": "assistant", "content": full_text})
-            save_message(st.session_state.login_username, "assistant", full_text)
-            
-            time.sleep(0.2)
+            time.sleep(0.6)
             st.rerun()
             
         except Exception as ex:
