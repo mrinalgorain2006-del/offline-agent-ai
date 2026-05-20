@@ -116,12 +116,13 @@ st.markdown("""
 # =====================================================================
 #  1. CLOUD STORAGE ROUTER & PERSISTENT DATA SCHEMA (NEON ENVIRONMENT)
 # =====================================================================
-#  NEW HIGH-PERFORMANCE PROXY GLOBAL ROUTING LINK
+#  FINAL HIGH-STABILITY SERVERLESS ENDPOINT
 SQLITE_DB_FILE = "chat_history.db"
 NEON_DATABASE_URL = "postgresql://neondb_owner:npg_cOan5sF7yRTU@ep-long-lake-aolrehwr.c-2.ap-southeast-1.aws.neon.tech/neondb?sslmode=require"
 
-# Serverless Cloud Inference Configuration Layer (Updated Routing Gateway)
-CLOUD_INFERENCE_URL = "https://router.huggingface.co/v1/models/meta-llama/Meta-Llama-3-8B-Instruct"
+# High-Performance Serverless Gateway Node
+CLOUD_INFERENCE_URL = "https://api-inference.huggingface.co/models/Qwen/Qwen2.5-Coder-7B-Instruct"
+
 if "CLOUD_API_KEY" in st.secrets:
     CLOUD_API_KEY = st.secrets["CLOUD_API_KEY"]
 else:
@@ -525,39 +526,39 @@ CONTEXT REFERENCE PACK:
         prompt_payload = f"System Rules:\n{rules}\nUser Prompt:\n{payload_string}\nAssistant:"
         
         #  NEW MULTI-FORMAT COMPATIBLE PARSING LAYER
+        #  STABLE MULTIMODAL INFERENCE ROUTING MATRIX
         try:
             t_start = time.time()
-            # Send standard chat payload parameters
             response = requests.post(
                 CLOUD_INFERENCE_URL, 
                 headers=headers, 
-                json={"messages": [{"role": "user", "content": prompt_payload}], "max_tokens": 600, "temperature": 0.15}, 
+                json={"inputs": prompt_payload, "parameters": {"max_new_tokens": 600, "temperature": 0.2}}, 
                 timeout=15
             )
             t_delta = time.time() - t_start
             
-            res_json = response.json()
-            
-            # Smart fallback router logic to parse any API layout response cleanly
-            if isinstance(res_json, list) and len(res_json) > 0:
-                raw_txt = res_json[0].get("generated_text", "")
-                full_text = raw_txt.split("Assistant:")[-1].strip() if "Assistant:" in raw_txt else raw_txt
-            elif isinstance(res_json, dict) and "choices" in res_json:
-                full_text = res_json["choices"][0]["message"]["content"].strip()
-            elif isinstance(res_json, dict) and "error" in res_json:
-                full_text = f"Hugging Face Hub Gateway Notice: {res_json['error']}"
+            # Defensive check: Ensure server returned content before parsing
+            if not response.text.strip():
+                full_text = "Serverless pipeline returned an empty response stream. Please re-trigger the query engine."
             else:
-                full_text = "Cloud token pipeline completed with a fallback confirmation state."
-                
-            if t_delta > 0:
+                res_json = response.json()
+                if isinstance(res_json, list) and len(res_json) > 0:
+                    raw_txt = res_json[0].get("generated_text", "")
+                    # Extract text cleaner split
+                    full_text = raw_txt.split("Assistant:")[-1].strip() if "Assistant:" in raw_txt else raw_txt
+                elif isinstance(res_json, dict) and "error" in res_json:
+                    full_text = f"Inference Notice: {res_json['error']}"
+                else:
+                    full_text = "Cloud token pipeline completed with an alternative structure state."
+                    
+            if t_delta > 0 and "full_text" in locals():
                 st.session_state.speed_telemetry = f"{round(len(full_text.split()) / t_delta, 1)} words/sec (Serverless Compute)"
             
             placeholder.markdown(full_text)
-            
             st.session_state.chat_history.append({"role": "assistant", "content": full_text})
             save_message(st.session_state.login_username, "assistant", full_text)
+            
         except Exception as ex:
             placeholder.error(f"Cloud Inference Connection Exception: {str(ex)}")
-                
     #  REPLACE WITH THIS CLEAN FINISHED APP RE-RENDER LAYER
     st.write("")  # Flushes buffer cleanly
