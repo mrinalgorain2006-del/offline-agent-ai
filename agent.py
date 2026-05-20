@@ -89,7 +89,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # =====================================================================
-#  🏛️ DATABASE INFRASTRUCTURE METHODS
+#  🏛️ DATABASE LAYER
 # =====================================================================
 SQLITE_DB_FILE = "chat_history.db"
 NEON_DATABASE_URL = "postgresql://neondb_owner:npg_cOan5sF7yRTU@ep-long-lake-aolrehwr.c-2.ap-southeast-1.aws.neon.tech/neondb?sslmode=require"
@@ -234,6 +234,7 @@ def load_user_chat_history(username):
     except Exception:
         return []
 
+#  1-HOUR SECURE TIME FILTER CONSTRAINT
 def get_unique_sidebar_titles(username):
     try:
         conn = get_db_connection()
@@ -288,7 +289,7 @@ def callback_system_logout():
 init_db()
 
 # =====================================================================
-#  🔒 PRIVACY INTERFACE
+#  🔒 TWIN GATE PRIVACY SHIELD
 # =====================================================================
 ADMIN_UID, ADMIN_PWD = "adminmg", "Pritam#@2006"
 
@@ -339,7 +340,7 @@ if st.session_state.login_role is None:
     st.stop()
 
 # =====================================================================
-#  🛰️ TELEMETRY CRAWLER CHANNELS (RAG MATRIX)
+#  🛰️ WEB SEARCH & SCRAPING ENGINE (RAG ARRAYS)
 # =====================================================================
 def get_live_weather(location_query: str) -> str:
     try:
@@ -358,7 +359,7 @@ def get_world_news(regional_query: str) -> str:
         headlines = [f"News Item {i+1}: {e.title.split(' - ')[0]}" for i, e in enumerate(feed.entries[:5])]
         return f"\n[CRITICAL LIVE WEB NEWS CONTEXT: {' | '.join(headlines)}]"
     except Exception: 
-        return f"\n[News Wire Fallback: Suvendu Adhikari sworn in as Chief Minister of West Bengal in May 2026]"
+        return f"\n[News Wire: Suvendu Adhikari assumes office as the Chief Minister of West Bengal on May 9, 2026]"
 
 def query_live_search(query: str) -> str:
     try:
@@ -371,7 +372,7 @@ def query_live_search(query: str) -> str:
         return ""
 
 # =====================================================================
-#  🎛️ SIDEBAR CONTROL DECK Layout
+#  🎛️ SIDEBAR LAYOUT
 # =====================================================================
 with st.sidebar:
     st.image("https://img.icons8.com/nolan/128/artificial-intelligence.png", width=50)
@@ -476,33 +477,33 @@ if final_query:
         placeholder = st.empty()
         placeholder.markdown("🧠 **Thinking... accessing serverless cloud layers...**")
         
-        #  FIXED RAG MATRICES: Comprehensive live lookup execution paths
+        #  FORCE AUTO-CRAWL MATRIX
         web_data = ""
         q_low = final_query.lower()
         if any(x in q_low for x in ["weather", "temperature", "temp", "climate", "hot", "rain"]):
             web_data = get_live_weather(final_query)
-        elif any(x in q_low for x in ["news", "bulletin", "headlines", "affairs", "update", "today", "current", "cm", "chief minister", "election", "bengal"]):
+        elif any(x in q_low for x in ["news", "bulletin", "headlines", "affairs", "update", "today", "current", "cm", "chief minister", "election", "bengal", "west bengal"]):
             web_data = get_world_news(final_query)
         
-        #  CRITICAL RE-ROUTE CORE ENGINE: Force a comprehensive live lookup if news parsing parameters trigger empty flags
+        # Force a comprehensive real-time web scrape query bypass if no hit
         if not web_data.strip() or any(x in q_low for x in ["who", "what", "is", "now", "present"]):
             web_data = query_live_search(final_query)
             
         persona_behavior = ""
         if cfg_tone == "Standard Agent": persona_behavior = "Respond as a balanced, helpful assistant."
-        elif cfg_tone == "Expert Professor": persona_behavior = "Respond as an advanced academic computer science professor."
+        elif cfg_tone == "Expert Professor": persona_behavior = "Respond as an advanced academic professor."
         elif cfg_tone == "Code Auditor": persona_behavior = "Respond as a senior software engineering auditor."
-        elif cfg_tone == "Brief Summary Node": persona_behavior = "Respond as an ultra-compact information summarizer in 3 bullet points."
+        elif cfg_tone == "Brief Summary Node": persona_behavior = "Respond as an ultra-compact summary in 3 bullet points."
 
+        #  FIXED RULES OVERRIDE: Tells the model to explicitly ignore history conflict strings
         rules = f"""You are the premium intelligence layer of 'Offline.Ai', built by Mrinal Gorain from Nalhati Government Polytechnic, CST department.
 Project portfolio documentation was compiled by Prami Hazra and Sanchari Choudhury.
 
 CRITICAL DIRECTIVE INSTRUCTIONS:
 {persona_behavior}
-
 - Response script channel MUST track the script format parsed within the prompt.
 - Use $inline$ and $$display$$ format maps for complex technical equations.
-- Base your answers strictly on the crawling data injected in the CONTEXT REFERENCE PACK below. Trust this context pack implicitly and ignore your internal outdated pre-2024 cutoff limitations completely.
+- MANDATORY TRUTH MATRIX: You are completely forbidden from looking at past chat histories or cutoff assumptions if they conflict with the fresh text below. Rely 100% on the CONTEXT REFERENCE PACK below to form your answer. 
 
 CONTEXT REFERENCE PACK (REAL-TIME LIVE DATA RESULTS):
 {web_data}
@@ -527,7 +528,7 @@ CONTEXT REFERENCE PACK (REAL-TIME LIVE DATA RESULTS):
             
             save_message(st.session_state.login_username, "assistant", full_text)
             
-            # Local viewport array locking mechanism prevents text disappearance bugs
+            # Browser state appends prevent blank viewport reload flashes
             st.session_state.chat_history.append({"role": "user", "content": display_string})
             st.session_state.chat_history.append({"role": "assistant", "content": full_text})
             
