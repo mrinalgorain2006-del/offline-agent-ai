@@ -130,8 +130,9 @@ def save_message(username, sender, text):
         cursor = conn.cursor()
         param = "%s" if USING_CLOUD_DB else "?"
         clean_user = str(username).strip().lower()
-        cursor.execute(f"INSERT INTO logs (username, sender, message_text) VALUES ({param}, {param}, {param})", (clean_user, sender, text))
-        conn.commit()
+        if clean_user != "": # Protection constraint to keep tables completely clean
+            cursor.execute(f"INSERT INTO logs (username, sender, message_text) VALUES ({param}, {param}, {param})", (clean_user, sender, text))
+            conn.commit()
         cursor.close()
         conn.close()
     except Exception:
@@ -143,6 +144,13 @@ def register_user_in_db(uid, pwd):
         cursor = conn.cursor()
         param = "%s" if USING_CLOUD_DB else "?"
         clean_uid = str(uid).strip().lower()
+        
+        # Double check to prevent rogue space injections
+        if not clean_uid:
+            cursor.close()
+            conn.close()
+            return False
+            
         cursor.execute(f"SELECT student_uid FROM student_profiles WHERE LOWER(student_uid) = LOWER({param})", (clean_uid,))
         if cursor.fetchone():
             cursor.close()
@@ -162,6 +170,12 @@ def validate_user_login_db(uid, pwd):
         cursor = conn.cursor()
         param = "%s" if USING_CLOUD_DB else "?"
         clean_uid = str(uid).strip().lower()
+        
+        if not clean_uid or not str(pwd).strip():
+            cursor.close()
+            conn.close()
+            return False
+            
         cursor.execute(f"SELECT student_pwd, is_active FROM student_profiles WHERE LOWER(student_uid) = LOWER({param})", (clean_uid,))
         row = cursor.fetchone()
         cursor.close()
@@ -289,7 +303,7 @@ def callback_system_logout():
 init_db()
 
 # =====================================================================
-#  🔒 TWIN GATE PRIVACY SHIELD
+#  🔒 TWIN GATE PRIVACY SHIELD WITH SECURITY ENFORCEMENT
 # =====================================================================
 ADMIN_UID, ADMIN_PWD = "adminmg", "Pritam#@2006"
 
@@ -301,39 +315,55 @@ def render_login_interface():
     
     with tab_login:
         with st.form("student_login_form"):
-            u_name = st.text_input("User ID Identification")
-            u_pass = st.text_input("Workspace Security Key", type="password")
+            u_name = st.text_input("User ID Identification", placeholder="Enter registered username...")
+            u_pass = st.text_input("Workspace Security Key", type="password", placeholder="Enter password...")
             if st.form_submit_button("Unlock Workspace 🚀", use_container_width=True):
-                if validate_user_login_db(u_name.strip(), u_pass.strip()):
+                # FIXED: Block empty or missing login inputs natively
+                if not u_name.strip() or not u_pass.strip():
+                    st.error("❌ Inputs cannot be left empty.")
+                elif validate_user_login_db(u_name.strip(), u_pass.strip()):
                     st.session_state.login_role = "user"
                     st.session_state.login_username = u_name.strip().lower()
                     st.session_state.chat_history = load_user_chat_history(u_name.strip())
                     st.session_state.sidebar_queries = get_unique_sidebar_titles(u_name.strip())
                     st.rerun()
-                else: st.error("❌ Access Denied.")
+                else: 
+                    st.error("❌ Invalid credentials or account deactivated.")
                     
     with tab_signup:
         with st.form("student_signup_form"):
-            new_uid = st.text_input("Choose Unique User ID")
-            new_pwd = st.text_input("Set Secure Account Password", type="password")
-            confirm_pwd = st.text_input("Confirm Account Password", type="password")
+            new_uid = st.text_input("Choose Unique User ID", placeholder="e.g., gouranga_cst")
+            new_pwd = st.text_input("Set Secure Account Password", type="password", placeholder="Minimum 4 characters...")
+            confirm_pwd = st.text_input("Confirm Account Password", type="password", placeholder="Retype password...")
             if st.form_submit_button("Register Account Infrastructure 💾", use_container_width=True):
-                if new_pwd != confirm_pwd: st.error("Passwords match error.")
-                elif register_user_in_db(new_uid.strip(), new_pwd.strip()): st.success("🎉 Account created!")
-                else: st.error("⚠️ Token exists.")
+                #  FIXED: Enforced strict validation rules to stop fake blank creations permanently
+                if not new_uid.strip() or not new_pwd.strip():
+                    st.error("❌ Registration Blocked: User ID and Password fields cannot be empty!")
+                elif len(new_pwd.strip()) < 4:
+                    st.error("❌ Registration Blocked: Password must be at least 4 characters long.")
+                elif new_pwd.strip() != confirm_pwd.strip(): 
+                    st.error("❌ Registration Blocked: Passwords do not match.")
+                else:
+                    if register_user_in_db(new_uid.strip(), new_pwd.strip()): 
+                        st.success("🎉 Account successfully registered into system architecture ledger! Please switch to User Login to access your console.")
+                    else: 
+                        st.error("⚠️ Registration Failed: Username token already exists in cloud tables.")
                         
     with tab_admin:
         with st.form("admin_login_form"):
             a_name = st.text_input("Admin Master Key ID")
             a_pass = st.text_input("Master Password Profile", type="password")
             if st.form_submit_button("Unlock Root Systems 🔓", use_container_width=True):
-                if a_name == ADMIN_UID and a_pass == ADMIN_PWD:
+                if not a_name.strip() or not a_pass.strip():
+                    st.error("❌ Admin credentials cannot be blank.")
+                elif a_name == ADMIN_UID and a_pass == ADMIN_PWD:
                     st.session_state.login_role = "admin"
                     st.session_state.login_username = "system_admin"
                     st.session_state.chat_history = []
                     st.session_state.sidebar_queries = get_unique_sidebar_titles("system_admin")
                     st.rerun()
-                else: st.error("❌ Access Denied.")
+                else: 
+                    st.error("❌ Access Denied: Invalid administrative credentials.")
 
 if st.session_state.login_role is None:
     render_login_interface()
@@ -359,7 +389,7 @@ def get_world_news(regional_query: str) -> str:
         headlines = [f"News Item {i+1}: {e.title.split(' - ')[0]}" for i, e in enumerate(feed.entries[:5])]
         return f"\n[CRITICAL LIVE WEB NEWS CONTEXT: {' | '.join(headlines)}]"
     except Exception: 
-        return f"\n[News Wire: Suvendu Adhikari assumes office as the Chief Minister of West Bengal on May 9, 2026]"
+        return f"\n[News Wire Context Pack: Fresh telemetry logging active]"
 
 def query_live_search(query: str) -> str:
     try:
@@ -387,22 +417,23 @@ with st.sidebar:
         st.subheader("👥 Registered User Status Node")
         user_rows = fetch_all_users_raw()
         for uid_tag, active_flag in user_rows:
-            st.markdown(f"👤 User: `{uid_tag}`")
-            c_status, c_del = st.columns([1.0, 1.0])
-            with c_status:
-                if int(active_flag) == 1:
-                    if st.button("🟢 Deactivate", key=f"deact_{uid_tag}"):
-                        change_user_status_db(uid_tag, 0)
+            if uid_tag.strip() != "": # Hide legacy anomalies if they existed
+                st.markdown(f"👤 User: `{uid_tag}`")
+                c_status, c_del = st.columns([1.0, 1.0])
+                with c_status:
+                    if int(active_flag) == 1:
+                        if st.button("🟢 Deactivate", key=f"deact_{uid_tag}"):
+                            change_user_status_db(uid_tag, 0)
+                            st.rerun()
+                    else:
+                        if st.button("🔴 Activate", key=f"act_{uid_tag}"):
+                            change_user_status_db(uid_tag, 1)
+                            st.rerun()
+                with c_del:
+                    if st.button("🗑️ Delete", key=f"del_{uid_tag}"):
+                        delete_user_from_db(uid_tag)
                         st.rerun()
-                else:
-                    if st.button("🔴 Activate", key=f"act_{uid_tag}"):
-                        change_user_status_db(uid_tag, 1)
-                        st.rerun()
-            with c_del:
-                if st.button("🗑️ Delete", key=f"del_{uid_tag}"):
-                    delete_user_from_db(uid_tag)
-                    st.rerun()
-            st.markdown("<hr style='margin:4px 0;'/>", unsafe_allow_html=True)
+                st.markdown("<hr style='margin:4px 0;'/>", unsafe_allow_html=True)
             
     if st.session_state.login_role in ["user", "admin"]:
         st.markdown("---")
