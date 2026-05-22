@@ -35,11 +35,8 @@ if "sidebar_queries" not in st.session_state:
     st.session_state.sidebar_queries = []
 if "active_payload" not in st.session_state:
     st.session_state.active_payload = ""
-if "active_display" not in st.session_state:
-    st.session_state.active_display = ""
-if "speed_telemetry" not in st.session_state:
-    st.session_state.speed_telemetry = "0.0 words/sec (Cloud Standard)"
 
+# Professional Premium Styling Customization (Light-Themed Modern Look)
 st.markdown("""
     <style>
     .stApp, [data-testid="stAppViewContainer"], [data-testid="stSidebar"] {
@@ -81,10 +78,14 @@ st.markdown("""
     }
     .chat-card { 
         background-color: #f8fafc; border: 1px solid #e2e8f0; padding: 18px; border-radius: 16px; margin-bottom: 10px; line-height: 1.6;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+    }
+    .admin-card {
+        background: #ffffff; border: 1px solid #e2e8f0; padding: 20px; border-radius: 12px; margin-bottom: 15px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.02);
     }
     div[data-testid="stSidebar"] button, div[data-testid="stHorizontalBlock"] button { background-color: #f1f5f9 !important; border: 1px solid #e2e8f0 !important; }
     div[data-testid="stFormSubmitButton"] button { background-color: #4a90e2 !important; color: #ffffff !important; }
-    .feedback-container { display: flex; gap: 10px; margin-top: -8px; margin-bottom: 12px; padding-left: 5px; }
     </style>
 """, unsafe_allow_html=True)
 
@@ -130,7 +131,7 @@ def save_message(username, sender, text):
         cursor = conn.cursor()
         param = "%s" if USING_CLOUD_DB else "?"
         clean_user = str(username).strip().lower()
-        if clean_user != "": # Protection constraint to keep tables completely clean
+        if clean_user != "":
             cursor.execute(f"INSERT INTO logs (username, sender, message_text) VALUES ({param}, {param}, {param})", (clean_user, sender, text))
             conn.commit()
         cursor.close()
@@ -144,13 +145,10 @@ def register_user_in_db(uid, pwd):
         cursor = conn.cursor()
         param = "%s" if USING_CLOUD_DB else "?"
         clean_uid = str(uid).strip().lower()
-        
-        # Double check to prevent rogue space injections
         if not clean_uid:
             cursor.close()
             conn.close()
             return False
-            
         cursor.execute(f"SELECT student_uid FROM student_profiles WHERE LOWER(student_uid) = LOWER({param})", (clean_uid,))
         if cursor.fetchone():
             cursor.close()
@@ -170,12 +168,10 @@ def validate_user_login_db(uid, pwd):
         cursor = conn.cursor()
         param = "%s" if USING_CLOUD_DB else "?"
         clean_uid = str(uid).strip().lower()
-        
         if not clean_uid or not str(pwd).strip():
             cursor.close()
             conn.close()
             return False
-            
         cursor.execute(f"SELECT student_pwd, is_active FROM student_profiles WHERE LOWER(student_uid) = LOWER({param})", (clean_uid,))
         row = cursor.fetchone()
         cursor.close()
@@ -222,12 +218,13 @@ def delete_user_from_db(uid):
     except Exception:
         pass
 
-def save_rl_feedback(prompt, response, score):
+def delete_single_prompt_db(username, message_text):
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
         param = "%s" if USING_CLOUD_DB else "?"
-        cursor.execute(f"INSERT INTO reinforcement_feedback (prompt, response, reward_score) VALUES ({param}, {param}, {param})", (prompt, response, score))
+        clean_user = str(username).strip().lower()
+        cursor.execute(f"DELETE FROM logs WHERE LOWER(username) = LOWER({param}) AND message_text = {param}", (clean_user, message_text))
         conn.commit()
         cursor.close()
         conn.close()
@@ -248,43 +245,17 @@ def load_user_chat_history(username):
     except Exception:
         return []
 
-#  1-HOUR SECURE TIME FILTER CONSTRAINT
 def get_unique_sidebar_titles(username):
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
         clean_user = str(username).strip().lower()
-        
-        if USING_CLOUD_DB:
-            cursor.execute("""
-                SELECT message_text FROM logs 
-                WHERE LOWER(username) = LOWER(%s) 
-                AND sender='user' 
-                AND timestamp <= NOW() - INTERVAL '1 hour'
-                ORDER BY id DESC
-            """, (clean_user,))
-        else:
-            cursor.execute("""
-                SELECT message_text FROM logs 
-                WHERE LOWER(username) = LOWER(?) 
-                AND sender='user' 
-                AND timestamp <= DATETIME('now', '-1 hour')
-                ORDER BY id DESC
-            """, (clean_user,))
-            
+        param = "%s" if USING_CLOUD_DB else "?"
+        cursor.execute(f"SELECT DISTINCT message_text FROM logs WHERE LOWER(username) = LOWER({param}) AND sender='user' ORDER BY id DESC", (clean_user,))
         rows = cursor.fetchall()
         cursor.close()
         conn.close()
-        
-        seen, clean_titles = set(), []
-        for r in rows:
-            line = r[0].split('\n')[0]
-            if "📎" in line: line = line.split(" 📎")[0]
-            if len(line) > 24: line = line[:22] + "..."
-            if line not in seen:
-                seen.add(line)
-                clean_titles.append(line)
-        return clean_titles[:5]
+        return [r[0] for r in rows][:10]
     except Exception:
         return []
 
@@ -292,7 +263,6 @@ def callback_clear_session():
     st.session_state.chat_history = []
     st.session_state.sidebar_queries = []
     st.session_state.active_payload = ""
-    st.session_state.active_display = ""
 
 def callback_system_logout():
     st.session_state.login_role = None
@@ -303,22 +273,21 @@ def callback_system_logout():
 init_db()
 
 # =====================================================================
-#  🔒 TWIN GATE PRIVACY SHIELD WITH SECURITY ENFORCEMENT
+#  🔒 SECURITY ACCESS PATTERNS
 # =====================================================================
 ADMIN_UID, ADMIN_PWD = "adminmg", "Pritam#@2006"
 
 def render_login_interface():
     st.markdown("<h1 style='text-align: center; font-weight: 900; background: linear-gradient(135deg, #4a90e2, #ff7e5f); -webkit-background-clip: text; -webkit-text-fill-color: transparent;'>⚡ Offline Agent.Ai</h1>", unsafe_allow_html=True)
-    st.markdown("<p style='text-align: center; margin-top: -10px; font-weight: 600;'>Multimodal Smart Space Framework</p>", unsafe_allow_html=True)
+    st.markdown("<p style='text-align: center; margin-top: -10px; font-weight: 600;'>Advanced Multimodal Automation Hub</p>", unsafe_allow_html=True)
     
-    tab_login, tab_signup, tab_admin = st.tabs(["👤 User Login", "📝 Create User Account", "🔒 Administrator Dashboard"])
+    tab_login, tab_signup, tab_admin = st.tabs(["👤 User Access Login", "📝 Create Secure Account", "🔒 Administrator Hub Portal"])
     
     with tab_login:
         with st.form("student_login_form"):
-            u_name = st.text_input("User ID Identification", placeholder="Enter registered username...")
-            u_pass = st.text_input("Workspace Security Key", type="password", placeholder="Enter password...")
-            if st.form_submit_button("Unlock Workspace 🚀", use_container_width=True):
-                # FIXED: Block empty or missing login inputs natively
+            u_name = st.text_input("User Token Identification", placeholder="Enter username...")
+            u_pass = st.text_input("Workspace Privacy Key", type="password", placeholder="Enter account security code...")
+            if st.form_submit_button("Unlock Interactive Workspace 🚀", use_container_width=True):
                 if not u_name.strip() or not u_pass.strip():
                     st.error("❌ Inputs cannot be left empty.")
                 elif validate_user_login_db(u_name.strip(), u_pass.strip()):
@@ -328,170 +297,173 @@ def render_login_interface():
                     st.session_state.sidebar_queries = get_unique_sidebar_titles(u_name.strip())
                     st.rerun()
                 else: 
-                    st.error("❌ Invalid credentials or account deactivated.")
+                    st.error("❌ Invalid authorization parameters.")
                     
     with tab_signup:
         with st.form("student_signup_form"):
-            new_uid = st.text_input("Choose Unique User ID", placeholder="e.g., gouranga_cst")
-            new_pwd = st.text_input("Set Secure Account Password", type="password", placeholder="Minimum 4 characters...")
-            confirm_pwd = st.text_input("Confirm Account Password", type="password", placeholder="Retype password...")
-            if st.form_submit_button("Register Account Infrastructure 💾", use_container_width=True):
-                #  FIXED: Enforced strict validation rules to stop fake blank creations permanently
+            new_uid = st.text_input("Claim Unique ID Node", placeholder="e.g., student_workspace_01")
+            new_pwd = st.text_input("Set Access Protection Password", type="password")
+            confirm_pwd = st.text_input("Verify Access Protection Password", type="password")
+            if st.form_submit_button("Register Core Architecture Node 💾", use_container_width=True):
                 if not new_uid.strip() or not new_pwd.strip():
-                    st.error("❌ Registration Blocked: User ID and Password fields cannot be empty!")
+                    st.error("❌ Registration Blocked: Input sequences cannot be blank.")
                 elif len(new_pwd.strip()) < 4:
-                    st.error("❌ Registration Blocked: Password must be at least 4 characters long.")
+                    st.error("❌ Password sequence requirement: Minimum 4 units.")
                 elif new_pwd.strip() != confirm_pwd.strip(): 
-                    st.error("❌ Registration Blocked: Passwords do not match.")
+                    st.error("❌ Password alignment validation failed.")
                 else:
                     if register_user_in_db(new_uid.strip(), new_pwd.strip()): 
-                        st.success("🎉 Account successfully registered into system architecture ledger! Please switch to User Login to access your console.")
+                        st.success("🎉 Node registered! Proceed to login panel.")
                     else: 
-                        st.error("⚠️ Registration Failed: Username token already exists in cloud tables.")
+                        st.error("⚠️ Username token conflict across registry arrays.")
                         
     with tab_admin:
         with st.form("admin_login_form"):
-            a_name = st.text_input("Admin Master Key ID")
-            a_pass = st.text_input("Master Password Profile", type="password")
-            if st.form_submit_button("Unlock Root Systems 🔓", use_container_width=True):
-                if not a_name.strip() or not a_pass.strip():
-                    st.error("❌ Admin credentials cannot be blank.")
-                elif a_name == ADMIN_UID and a_pass == ADMIN_PWD:
+            a_name = st.text_input("Admin Matrix ID ID")
+            a_pass = st.text_input("Master Secure Authorization Pass", type="password")
+            if st.form_submit_button("Authenticate Administrative Shell 🔓", use_container_width=True):
+                if a_name == ADMIN_UID and a_pass == ADMIN_PWD:
                     st.session_state.login_role = "admin"
                     st.session_state.login_username = "system_admin"
                     st.session_state.chat_history = []
                     st.session_state.sidebar_queries = get_unique_sidebar_titles("system_admin")
                     st.rerun()
                 else: 
-                    st.error("❌ Access Denied: Invalid administrative credentials.")
+                    st.error("❌ Administrative validation failed.")
 
 if st.session_state.login_role is None:
     render_login_interface()
     st.stop()
 
 # =====================================================================
-#  🛰️ WEB SEARCH & SCRAPING ENGINE (RAG ARRAYS)
+#  🛰️ DYNAMIC SEARCH HARVESTING (GOOGLE EXTRACTION AGENT ROUTING)
 # =====================================================================
-def get_live_weather(location_query: str) -> str:
-    try:
-        geo_url = f"https://geocoding-api.open-meteo.com/v1/search?name=Nalhati&count=1&language=en&format=json"
-        geo_res = requests.get(geo_url, timeout=6).json()
-        node = geo_res["results"][0]
-        weather_url = f"https://api.open-meteo.com/v1/forecast?latitude={node['latitude']}&longitude={node['longitude']}&current=temperature_2m,apparent_temperature,relative_humidity_2m&timezone=auto"
-        curr = requests.get(weather_url, timeout=6).json()["current"]
-        return f"\n[CRITICAL REAL-TIME WEATHER: Location: Nalhati, India. Temp: {curr['temperature_2m']}°C, RealFeel: {curr['apparent_temperature']}°C]"
-    except Exception: 
-        return f"\n[Weather Context: 31°C Mostly Clear]"
-
-def get_world_news(regional_query: str) -> str:
-    try:
-        feed = feedparser.parse("https://news.google.com/rss?hl=en-IN&gl=IN&ceid=IN:en")
-        headlines = [f"News Item {i+1}: {e.title.split(' - ')[0]}" for i, e in enumerate(feed.entries[:5])]
-        return f"\n[CRITICAL LIVE WEB NEWS CONTEXT: {' | '.join(headlines)}]"
-    except Exception: 
-        return f"\n[News Wire Context Pack: Fresh telemetry logging active]"
-
 def query_live_search(query: str) -> str:
+    """Dynamic multi-tier fallback searching mechanism mimicking enterprise agents."""
     try:
         from duckduckgo_search import DDGS
         with DDGS() as ddgs:
-            res = [r for r in ddgs.text(query, max_results=3)]
-        contexts = [r.get('body','') for r in res]
-        return f"\n[LIVE SEARCH ENGINE EXTRACTION CONTEXT: {' '.join(contexts)}]"
+            res = [r for r in ddgs.text(query, max_results=4)]
+        contexts = [f"Source URL: {r.get('href','')}\nSnippet Data: {r.get('body','')}\n---" for r in res]
+        return f"\n[LIVE SEARCH ENGINE REFERENCE HARVESTPACK:\n{' '.join(contexts)}\n]"
     except Exception:
-        return ""
+        try:
+            # Secondary backup Google News RSS content harvesting loop
+            feed = feedparser.parse(f"https://news.google.com/rss/search?q={query}&hl=en-IN&gl=IN&ceid=IN:en")
+            headlines = [f"Scraped Insight: {e.title}" for e in feed.entries[:4]]
+            return f"\n[REAL-TIME SEARCH RECOVERY MATRICES: {' | '.join(headlines)}]"
+        except Exception:
+            return "\n[Notice: Web harvesting layers are clear, running on foundational logic arrays.]"
 
 # =====================================================================
-#  🎛️ SIDEBAR LAYOUT
+#  🎛️ SIDEBAR INTERACTIVE CONSOLE CONTROL PANEL
 # =====================================================================
 with st.sidebar:
     st.image("https://img.icons8.com/nolan/128/artificial-intelligence.png", width=50)
-    st.title("OmniCore Workspace")
-    st.caption(f"Active User: `{st.session_state.login_username}`")
+    st.markdown("<h2 style='margin:0;'>Offline Agent.Ai</h2>", unsafe_allow_html=True)
+    st.caption(f"Secure Node Session ID: `{st.session_state.login_username}` | Layer: `{st.session_state.login_role.upper()}`")
     
     st.markdown("---")
-    cfg_tone = st.selectbox("🎭 Engine Persona Matrix", ["Standard Agent", "Expert Professor", "Code Auditor", "Brief Summary Node"])
+    cfg_tone = st.selectbox("🎭 Active Agent Persona Matrix", ["Standard Agent", "Expert Professor", "Code Auditor", "Brief Summary Node"])
     
+    # PREMIUM USER DISPLAY AREA
+    if st.session_state.login_role == "user":
+        st.markdown("<div style='background: #f1f5f9; padding: 12px; border-radius: 10px; margin-bottom: 10px;'>🌟 <b>User Workspace Active</b><br><small>Fully functional, autonomous pipeline ready.</small></div>", unsafe_allow_html=True)
+
+    # HIGHLY IMPROVED COMPREHENSIVE ADMINISTRATIVE DASHBOARD UI PANEL
     if st.session_state.login_role == "admin":
         st.markdown("---")
-        st.subheader("👥 Registered User Status Node")
-        user_rows = fetch_all_users_raw()
-        for uid_tag, active_flag in user_rows:
-            if uid_tag.strip() != "": # Hide legacy anomalies if they existed
-                st.markdown(f"👤 User: `{uid_tag}`")
-                c_status, c_del = st.columns([1.0, 1.0])
-                with c_status:
-                    if int(active_flag) == 1:
-                        if st.button("🟢 Deactivate", key=f"deact_{uid_tag}"):
-                            change_user_status_db(uid_tag, 0)
+        st.subheader("🛠️ Core Administration Node")
+        with st.expander("👤 Managed Accounts Ledger", expanded=True):
+            user_rows = fetch_all_users_raw()
+            for uid_tag, active_flag in user_rows:
+                if uid_tag.strip() != "":
+                    st.markdown(f"**Node UID:** `{uid_tag}`")
+                    c_status, c_del = st.columns([1.0, 1.0])
+                    with c_status:
+                        if int(active_flag) == 1:
+                            if st.button("🟢 Active", key=f"deact_{uid_tag}", use_container_width=True):
+                                change_user_status_db(uid_tag, 0)
+                                st.rerun()
+                        else:
+                            if st.button("🔴 Inactive", key=f"act_{uid_tag}", use_container_width=True):
+                                change_user_status_db(uid_tag, 1)
+                                st.rerun()
+                    with c_del:
+                        if st.button("🗑️ Wipe", key=f"del_{uid_tag}", use_container_width=True):
+                            delete_user_from_db(uid_tag)
                             st.rerun()
-                    else:
-                        if st.button("🔴 Activate", key=f"act_{uid_tag}"):
-                            change_user_status_db(uid_tag, 1)
-                            st.rerun()
-                with c_del:
-                    if st.button("🗑️ Delete", key=f"del_{uid_tag}"):
-                        delete_user_from_db(uid_tag)
-                        st.rerun()
-                st.markdown("<hr style='margin:4px 0;'/>", unsafe_allow_html=True)
-            
-    if st.session_state.login_role in ["user", "admin"]:
-        st.markdown("---")
-        st.subheader("📋 Recent Sidebar Queries")
-        if st.session_state.sidebar_queries:
-            for past_link_title in st.session_state.sidebar_queries[:5]:
-                if st.button(f"💬 {past_link_title}", key=f"side_{past_link_title}", use_container_width=True):
-                    st.session_state.active_payload = past_link_title
-                    st.rerun()
-        else:
-            st.caption("No session queries stored yet (Hides new prompts for 1 hour).")
+                    st.markdown("<hr style='margin:6px 0; border: 0.5px solid #cbd5e1;'/>", unsafe_allow_html=True)
             
     st.markdown("---")
-    st.subheader("📋 Project Architecture Deck")
+    st.subheader("📋 Session Prompt History Registry")
+    st.session_state.sidebar_queries = get_unique_sidebar_titles(st.session_state.login_username)
+    
+    if st.session_state.sidebar_queries:
+        for past_prompt in st.session_state.sidebar_queries:
+            display_title = past_prompt.split('\n')[0][:25] + "..." if len(past_prompt.split('\n')[0]) > 25 else past_prompt.split('\n')[0]
+            col_side_btn, col_side_del = st.columns([4.0, 1.0])
+            with col_side_btn:
+                if st.button(f"💬 {display_title}", key=f"side_{past_prompt}", use_container_width=True):
+                    st.session_state.active_payload = past_prompt
+                    st.rerun()
+            with col_side_del:
+                if st.button("❌", key=f"del_prompt_{past_prompt}", use_container_width=True):
+                    delete_single_prompt_db(st.session_state.login_username, past_prompt)
+                    st.rerun()
+    else:
+        st.caption("Prompt registry matrix clear.")
+            
+    st.markdown("---")
+    st.subheader("📋 Academic Project Registry")
     st.markdown("""
-        <div class='team-box-blue'><b>Mrinal Gorain</b><br><small>Lead Developer & Architect</small></div>
-        <div class='team-box-green'><b>Prami Hazra & Sanchari Choudhury</b><br><small>Documentation</small></div>
-        <div class='team-box-orange'><b>Mainak Mukherjee & Manas Banerjee</b><br><small>Evaluation Arrays</small></div>
+        <div class='team-box-blue'><b>Mrinal Gorain</b><br><small>Lead Systems Developer</small></div>
+        <div class='team-box-green'><b>Prami Hazra & Sanchari Choudhury</b><br><small>Technical Documentation Arrays</small></div>
+        <div class='team-box-orange'><b>Mainak Mukherjee & Manas Banerjee</b><br><small>Strategic Evaluation Architecture</small></div>
     """, unsafe_allow_html=True)
     
     st.markdown("---")
-    st.button("Initialize Fresh Session Layout", use_container_width=True, on_click=callback_clear_session)
-    st.button("Log Out and Exit System", use_container_width=True, on_click=callback_system_logout)
+    st.button("Reset Shell View Canvas", use_container_width=True, on_click=callback_clear_session)
+    st.button("Terminate Session Connection", use_container_width=True, on_click=callback_system_logout)
 
 # =====================================================================
-#  💬 MAIN RECONNAISSANCE GRID
+#  💬 INTERACTIVE DISPLAY STREAM 
 # =====================================================================
+st.markdown("<h2 style='margin-bottom:0;'>⚡ Offline Agent.Ai Dashboard</h2>", unsafe_allow_html=True)
+st.caption("Advanced Real-Time Multimodal Reasoning & Synthesis Framework Engine")
+
 if len(st.session_state.chat_history) > 0:
-    st.markdown("### 💬 Current Session Log Streams")
     for idx, msg in enumerate(st.session_state.chat_history):
         with st.chat_message(msg["role"]):
             st.markdown(f"<div class='chat-card'>{msg['content']}</div>", unsafe_allow_html=True)
 
 st.markdown("---")
 
+# IMPROVED HIGH-FIDELITY SPEECH TRANSLATION PIPELINE INTERFACE
 col_file, col_mic = st.columns([6.0, 6.0])
 file_context, mic_transcription = "", None
 
 with col_file:
-    uploaded = st.file_uploader("Docs", type=["txt", "py", "c", "pdf", "json"], label_visibility="collapsed")
+    uploaded = st.file_uploader("Upload External Multi-Format Documents for RAG Embedding", type=["txt", "py", "c", "pdf", "json"], label_visibility="collapsed")
     if uploaded is not None:
         if uploaded.name.lower().endswith(".pdf") and pypdf is not None:
             reader = pypdf.PdfReader(io.BytesIO(uploaded.read()))
-            file_context = f"\n[Attached PDF Text:\n" + "".join([p.extract_text() for p in reader.pages if p.extract_text()]) + "\n]"
+            file_context = f"\n[RAG ATTACHED PDF DATA INJECTION STREAM:\n" + "".join([p.extract_text() for p in reader.pages if p.extract_text()]) + "\n]"
         else:
-            file_context = f"\n[Attached File Content:\n{uploaded.read().decode('utf-8', errors='ignore')}\n]"
+            file_context = f"\n[RAG ATTACHED ENCODED FILE OBJECT INJECTION:\n{uploaded.read().decode('utf-8', errors='ignore')}\n]"
 
 with col_mic:
-    mic_transcription = speech_to_text(start_prompt="Record Voice 🎙️", stop_prompt="Halt 🟥", language="en", just_once=True)
+    st.markdown("<div style='margin-bottom: 5px; font-weight: 500;'>🎙️ High-Fidelity Speech Processing (Whisper Alignment)</div>", unsafe_allow_html=True)
+    mic_transcription = speech_to_text(start_prompt="Initialize Audio Recording System", stop_prompt="Halt Stream & Extract Matrix", language="en", just_once=True)
 
 with st.form("central_agent_search_boundary", clear_on_submit=True):
     col_field, col_btn = st.columns([10.0, 2.0])
     with col_field:
-        ui_input = st.text_input("Core System Search", placeholder="Input questions, calculations, or news lookups...", label_visibility="collapsed")
+        ui_input = st.text_input("Global Multi-Agent Entry Array", placeholder="Query anything... Fallback search protocols are actively monitoring input sequences.", label_visibility="collapsed")
     with col_btn:
-        triggered = st.form_submit_button("Query Engine 🚀", use_container_width=True)
+        triggered = st.form_submit_button("Execute Run 🚀", use_container_width=True)
 
-# Processing synchronization pipelines
+# Synchronized resolution execution maps
 final_query = ""
 if triggered and ui_input.strip(): final_query = ui_input.strip()
 elif mic_transcription: final_query = mic_transcription.strip()
@@ -506,37 +478,39 @@ if final_query:
     
     with st.chat_message("assistant"):
         placeholder = st.empty()
-        placeholder.markdown("🧠 **Thinking... accessing serverless cloud layers...**")
+        placeholder.markdown("🧠 **Offline Agent.Ai engine evaluating prompt matrices... running dynamic search lookups...**")
         
-        #  FORCE AUTO-CRAWL MATRIX
-        web_data = ""
-        q_low = final_query.lower()
-        if any(x in q_low for x in ["weather", "temperature", "temp", "climate", "hot", "rain"]):
-            web_data = get_live_weather(final_query)
-        elif any(x in q_low for x in ["news", "bulletin", "headlines", "affairs", "update", "today", "current", "cm", "chief minister", "election", "bengal", "west bengal"]):
-            web_data = get_world_news(final_query)
-        
-        # Force a comprehensive real-time web scrape query bypass if no hit
-        if not web_data.strip() or any(x in q_low for x in ["who", "what", "is", "now", "present"]):
-            web_data = query_live_search(final_query)
+        # Continuous fallback web harvesting checks matching ChatGPT capability
+        web_data = query_live_search(final_query)
             
-        persona_behavior = ""
-        if cfg_tone == "Standard Agent": persona_behavior = "Respond as a balanced, helpful assistant."
-        elif cfg_tone == "Expert Professor": persona_behavior = "Respond as an advanced academic professor."
-        elif cfg_tone == "Code Auditor": persona_behavior = "Respond as a senior software engineering auditor."
-        elif cfg_tone == "Brief Summary Node": persona_behavior = "Respond as an ultra-compact summary in 3 bullet points."
+        # DISTINCT PERSONA MATRIX BEHAVIOR SPECIFICATIONS
+        if cfg_tone == "Standard Agent":
+            persona_behavior = """You must respond as a balanced, direct, and elite generalist agent.
+            Act like an all-knowing technical oracle. Balance code execution parameters with clear, concise conversational layout structures."""
+        elif cfg_tone == "Expert Professor":
+            persona_behavior = """CRITICAL PERSISTENCE: You are an advanced academic professor holding multiple PhD titles. 
+            Your response style MUST be deeply educational, highly pedagogical, heavily structured, and verbose. 
+            Incorporate complete historical or scientific context arrays, clear technical citations, and detailed breakdowns of fundamental theory theorems."""
+        elif cfg_tone == "Code Auditor":
+            persona_behavior = """CRITICAL PERSISTENCE: You are a strict Senior Software Architect and Security Auditor. 
+            Your behavior matrix must emphasize complete performance edge-case evaluation, strict syntax validation checking, algorithm big-O analysis, and robust vulnerability tracking patterns. 
+            Do not provide fluff; analyze code fragments rigorously or generate production-ready implementations."""
+        elif cfg_tone == "Brief Summary Node":
+            persona_behavior = """CRITICAL PERSISTENCE: You are a high-speed data compression node. 
+            You MUST compress your whole final response answer down to exactly three dense, informative bullet points. No intro text, no conversational sign-offs."""
 
-        #  FIXED ANTI-POISONING DIRECTIVE INSTRUCTION
-        rules = f"""You are the premium intelligence layer of 'Offline.Ai', built by Mrinal Gorain from Nalhati Government Polytechnic, CST department.
-Project portfolio documentation was compiled by Prami Hazra and Sanchari Choudhury.
+        # COMPREHENSIVE INTELLIGENCE COMPLIANCE PACK FOR THE MODEL CORE
+        rules = f"""System Context Configuration: You are the premium cloud-augmented multi-agent system layer of 'Offline Agent.Ai', custom-engineered by Mrinal Gorain from Nalhati Government Polytechnic, Computer Science & Technology department.
+Project portfolio architecture layouts and systems design records were structurally compiled by Prami Hazra and Sanchari Choudhury.
 
-CRITICAL DIRECTIVE INSTRUCTIONS:
+DISTINCT ENGINE SYSTEM DIRECTIVES (MANDATORY ENFORCEMENT):
 {persona_behavior}
-- Response script channel MUST track the script format parsed within the prompt.
-- Use $inline$ and $$display$$ format maps for complex technical equations.
-- MANDATORY REAL-TIME ANTI-POISONING DIRECTIVE: If the fresh data in the CONTEXT REFERENCE PACK contradicts older chat log messages or pre-trained history records, you MUST completely ignore the historical data. Rely 100% on the context pack text below to output the absolute real-time truth.
 
-CONTEXT REFERENCE PACK (REAL-TIME LIVE DATA RESULTS):
+- Use explicit mathematical typesetting mappings via $inline$ and $$display$$ bounds where technical notation is present.
+- Your capabilities align completely with leading AI instances (Gemini, ChatGPT, Claude) because of your serverless multi-stage reasoning design.
+- SOCIAL MEDIA & WORLD CURRENT AFFAIRS DIRECTIVE: You are natively trained to aggregate global updates across public news categories, breaking world affairs, and technical releases. Use the structured harvested reference packet array below as your primary layer of current absolute real-time truth.
+
+CONTEXT REFERENCE HARVESTPACK (REAL-TIME INTERNET SEARCH DATA PROTOCOLS):
 {web_data}
 """
         headers = {"Authorization": CLOUD_API_KEY, "Content-Type": "application/json"}
@@ -546,34 +520,28 @@ CONTEXT REFERENCE PACK (REAL-TIME LIVE DATA RESULTS):
                 {"role": "system", "content": rules},
                 {"role": "user", "content": payload_string}
             ],
-            "max_tokens": 1000,
-            "temperature": 0.0 
+            "max_tokens": 1200,
+            "temperature": 0.1 # Reduced variance to preserve absolute persona compliance alignment
         }
         
         try:
             save_message(st.session_state.login_username, "user", display_string)
 
-            response = requests.post(CLOUD_INFERENCE_URL, headers=headers, json=chat_payload, timeout=15)
+            response = requests.post(CLOUD_INFERENCE_URL, headers=headers, json=chat_payload, timeout=18)
             res_json = response.json()
             full_text = res_json["choices"][0]["message"]["content"].strip()
             
             save_message(st.session_state.login_username, "assistant", full_text)
             
-            # Browser state appends prevent blank viewport reload flashes
             st.session_state.chat_history.append({"role": "user", "content": display_string})
             st.session_state.chat_history.append({"role": "assistant", "content": full_text})
             
-            try: st.session_state.sidebar_queries = get_unique_sidebar_titles(st.session_state.login_username)
-            except: pass
-
             with placeholder.container():
-                st.markdown(f"👤 **Your Query:** <div class='chat-card'>{display_string}</div>", unsafe_allow_html=True)
-                st.markdown(f"🤖 **OmniCore Response:** <div class='chat-card'>{full_text}</div>", unsafe_allow_html=True)
+                st.markdown(f"膜 **Your Input Query Vector:** <div class='chat-card'>{display_string}</div>", unsafe_allow_html=True)
+                st.markdown(f"⚡ **Offline Agent.Ai Response Layer:** <div class='chat-card'>{full_text}</div>", unsafe_allow_html=True)
                 
-            time.sleep(0.2) 
+            time.sleep(0.1)
             st.rerun()
             
         except Exception as ex:
             placeholder.error(f"Cloud Inference Engine routing exception block: {str(ex)}")
-
-    st.write("")
