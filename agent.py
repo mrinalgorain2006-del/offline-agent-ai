@@ -8,7 +8,7 @@ import time
 import sys
 import os
 import io
-import uuid # NEW: Library to track unique chat sessions globally
+import uuid
 
 # Silently ignore local self-signed SSL warning flags
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
@@ -32,9 +32,10 @@ if "login_username" not in st.session_state:
     st.session_state.login_username = None
 if "chat_history" not in st.session_state:
     st.session_state.chat_history = []
+if "sidebar_queries" not in st.session_state:
+    st.session_state.sidebar_queries = []
 if "active_payload" not in st.session_state:
     st.session_state.active_payload = ""
-# NEW: Session tracking memory nodes matching ChatGPT core capabilities
 if "current_session_id" not in st.session_state:
     st.session_state.current_session_id = str(uuid.uuid4())
 
@@ -82,10 +83,6 @@ st.markdown("""
         background-color: #f8fafc; border: 1px solid #e2e8f0; padding: 18px; border-radius: 16px; margin-bottom: 10px; line-height: 1.6;
         box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
     }
-    .admin-card {
-        background: #ffffff; border: 1px solid #e2e8f0; padding: 20px; border-radius: 12px; margin-bottom: 15px;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.02);
-    }
     div[data-testid="stSidebar"] button, div[data-testid="stHorizontalBlock"] button { background-color: #f1f5f9 !important; border: 1px solid #e2e8f0 !important; }
     div[data-testid="stFormSubmitButton"] button { background-color: #4a90e2 !important; color: #ffffff !important; }
     </style>
@@ -121,7 +118,6 @@ def init_db():
     auto_inc = "SERIAL PRIMARY KEY" if USING_CLOUD_DB else "INTEGER PRIMARY KEY AUTOINCREMENT"
     ts_type = "TIMESTAMP DEFAULT CURRENT_TIMESTAMP" if USING_CLOUD_DB else "DATETIME DEFAULT CURRENT_TIMESTAMP"
     
-    # UPDATED: Added session_id parameter tracking to link prompts inside unique folder nodes
     cursor.execute(f"CREATE TABLE IF NOT EXISTS logs (id {auto_inc}, username TEXT, session_id TEXT, sender TEXT, message_text TEXT, timestamp {ts_type})")
     cursor.execute(f"CREATE TABLE IF NOT EXISTS reinforcement_feedback (id {auto_inc}, prompt TEXT, response TEXT, reward_score INTEGER, timestamp {ts_type})")
     cursor.execute(f"CREATE TABLE IF NOT EXISTS student_profiles (id {auto_inc}, student_uid TEXT UNIQUE, student_pwd TEXT, is_active INTEGER DEFAULT 1, timestamp {ts_type})")
@@ -137,7 +133,6 @@ def save_message(username, session_id, sender, text):
         param = "%s" if USING_CLOUD_DB else "?"
         clean_user = str(username).strip().lower()
         if clean_user != "":
-            # Check if this session folder already exists, if not create it using the first question text
             cursor.execute(f"SELECT session_id FROM chat_sessions WHERE session_id={param}", (session_id,))
             if not cursor.fetchone() and sender == "user":
                 folder_name = text.split('\n')[0][:30] + "..." if len(text.split('\n')[0]) > 30 else text.split('\n')[0]
@@ -249,7 +244,6 @@ def delete_user_from_db(uid):
     except Exception:
         return False
 
-# NEW: Deletes an entire session conversation folder from storage ledgers
 def delete_entire_session_db(session_id):
     try:
         conn = get_db_connection()
@@ -263,7 +257,6 @@ def delete_entire_session_db(session_id):
     except Exception:
         pass
 
-# NEW: Loads specific logs tied only to the active folder session node
 def load_session_chat_history(session_id):
     try:
         conn = get_db_connection()
@@ -277,7 +270,6 @@ def load_session_chat_history(session_id):
     except Exception:
         return []
 
-# NEW: Fetches folder nodes with nested prompts mapped precisely inside
 def get_session_folders_structure(username):
     try:
         conn = get_db_connection()
@@ -303,7 +295,7 @@ def get_session_folders_structure(username):
 def callback_clear_session():
     st.session_state.chat_history = []
     st.session_state.active_payload = ""
-    st.session_state.current_session_id = str(uuid.uuid4()) # Generate new distinct timeline ID
+    st.session_state.current_session_id = str(uuid.uuid4())
 
 def callback_system_logout():
     st.session_state.login_role = None
@@ -427,6 +419,7 @@ with st.sidebar:
     if st.session_state.login_role == "user":
         st.markdown("<div style='background: #f1f5f9; padding: 12px; border-radius: 10px; margin-bottom: 10px;'>🌟 <b>User Workspace Active</b><br><small>Fully functional, autonomous pipeline ready.</small></div>", unsafe_allow_html=True)
 
+    # 🚨 HIDE MANAGE PANEL: Rolled completely inside strict conditional isolation check wrappers
     if st.session_state.login_role == "admin":
         st.markdown("---")
         st.subheader("🛠️ Core Administration Node")
@@ -461,7 +454,6 @@ with st.sidebar:
     
     if session_folders:
         for folder in session_folders:
-            # Main folder expander link mimicking ChatGPT sidebar layout trees
             with st.expander(f"📁 {folder['folder_title']}", expanded=(st.session_state.current_session_id == folder['session_id'])):
                 col_load, col_wipe = st.columns([4.0, 1.0])
                 with col_load:
@@ -476,7 +468,6 @@ with st.sidebar:
                             callback_clear_session()
                         st.rerun()
                 
-                # Render internal prompt logs as sub-items inside the target conversation folder
                 st.markdown("<div style='padding-left:10px; border-left:2px solid #cbd5e1; margin-top:5px;'>", unsafe_allow_html=True)
                 for q_idx, sub_prompt in enumerate(folder['sub_prompts'][:5]):
                     short_q = sub_prompt[:28] + "..." if len(sub_prompt) > 28 else sub_prompt
@@ -505,7 +496,6 @@ with st.sidebar:
 st.markdown("<h2 style='margin-bottom:0;'>⚡ Offline Agent.Ai Dashboard</h2>", unsafe_allow_html=True)
 st.caption(f"Session Token Array ID: `{st.session_state.current_session_id}`")
 
-# Fetch fresh log state tracking variables context matching user viewport shifts
 if not st.session_state.chat_history and st.session_state.current_session_id:
     st.session_state.chat_history = load_session_chat_history(st.session_state.current_session_id)
 
@@ -572,6 +562,7 @@ if final_query:
             persona_behavior = """CRITICAL PERSISTENCE: You are a high-speed data compression node. 
             You MUST compress your whole final response answer down to exactly three dense, informative bullet points. No intro text, no conversational sign-offs."""
 
+        # MANDATORY REAL-TIME CONTROL MATRIX ENFORCED
         rules = f"""System Context Configuration: You are the premium cloud-augmented multi-agent system layer of 'Offline Agent.Ai', custom-engineered by Mrinal Gorain from Nalhati Government Polytechnic, Computer Science & Technology department.
 Project portfolio architecture layouts and systems design records were structurally compiled by Prami Hazra and Sanchari Choudhury.
 
@@ -581,6 +572,7 @@ DISTINCT ENGINE SYSTEM DIRECTIVES (MANDATORY ENFORCEMENT):
 - Use explicit mathematical typesetting mappings via $inline$ and $$display$$ bounds where technical notation is present.
 - Your capabilities align completely with leading AI instances (Gemini, ChatGPT, Claude) because of your serverless multi-stage reasoning design.
 - SOCIAL MEDIA & WORLD CURRENT AFFAIRS DIRECTIVE: You are natively trained to aggregate global updates across public news categories, breaking world affairs, and technical releases. Use the structured harvested reference packet array below as your primary layer of current absolute real-time truth.
+- Do not append structural descriptions, markdown technical layouts, raw string citation indices, or trailing mathematical blocks at the final end of your responses unless explicitly requested by the question.
 
 CONTEXT REFERENCE HARVESTPACK (REAL-TIME INTERNET SEARCH DATA PROTOCOLS):
 {web_data}
@@ -597,7 +589,6 @@ CONTEXT REFERENCE HARVESTPACK (REAL-TIME INTERNET SEARCH DATA PROTOCOLS):
         }
         
         try:
-            # NEW: Message save pipeline incorporates current_session_id mapping to isolate threads safely
             save_message(st.session_state.login_username, st.session_state.current_session_id, "user", display_string)
 
             response = requests.post(CLOUD_INFERENCE_URL, headers=headers, json=chat_payload, timeout=18)
