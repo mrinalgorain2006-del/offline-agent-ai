@@ -8,6 +8,7 @@ import time
 import sys
 import os
 import io
+import uuid # NEW: Library to track unique chat sessions globally
 
 # Silently ignore local self-signed SSL warning flags
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
@@ -31,10 +32,11 @@ if "login_username" not in st.session_state:
     st.session_state.login_username = None
 if "chat_history" not in st.session_state:
     st.session_state.chat_history = []
-if "sidebar_queries" not in st.session_state:
-    st.session_state.sidebar_queries = []
 if "active_payload" not in st.session_state:
     st.session_state.active_payload = ""
+# NEW: Session tracking memory nodes matching ChatGPT core capabilities
+if "current_session_id" not in st.session_state:
+    st.session_state.current_session_id = str(uuid.uuid4())
 
 # Professional Premium Styling Customization (Light-Themed Modern Look)
 st.markdown("""
@@ -118,21 +120,30 @@ def init_db():
     cursor = conn.cursor()
     auto_inc = "SERIAL PRIMARY KEY" if USING_CLOUD_DB else "INTEGER PRIMARY KEY AUTOINCREMENT"
     ts_type = "TIMESTAMP DEFAULT CURRENT_TIMESTAMP" if USING_CLOUD_DB else "DATETIME DEFAULT CURRENT_TIMESTAMP"
-    cursor.execute(f"CREATE TABLE IF NOT EXISTS logs (id {auto_inc}, username TEXT, sender TEXT, message_text TEXT, timestamp {ts_type})")
+    
+    # UPDATED: Added session_id parameter tracking to link prompts inside unique folder nodes
+    cursor.execute(f"CREATE TABLE IF NOT EXISTS logs (id {auto_inc}, username TEXT, session_id TEXT, sender TEXT, message_text TEXT, timestamp {ts_type})")
     cursor.execute(f"CREATE TABLE IF NOT EXISTS reinforcement_feedback (id {auto_inc}, prompt TEXT, response TEXT, reward_score INTEGER, timestamp {ts_type})")
     cursor.execute(f"CREATE TABLE IF NOT EXISTS student_profiles (id {auto_inc}, student_uid TEXT UNIQUE, student_pwd TEXT, is_active INTEGER DEFAULT 1, timestamp {ts_type})")
+    cursor.execute(f"CREATE TABLE IF NOT EXISTS chat_sessions (id {auto_inc}, username TEXT, session_id TEXT UNIQUE, folder_title TEXT, timestamp {ts_type})")
     conn.commit()
     cursor.close()
     conn.close()
 
-def save_message(username, sender, text):
+def save_message(username, session_id, sender, text):
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
         param = "%s" if USING_CLOUD_DB else "?"
         clean_user = str(username).strip().lower()
         if clean_user != "":
-            cursor.execute(f"INSERT INTO logs (username, sender, message_text) VALUES ({param}, {param}, {param})", (clean_user, sender, text))
+            # Check if this session folder already exists, if not create it using the first question text
+            cursor.execute(f"SELECT session_id FROM chat_sessions WHERE session_id={param}", (session_id,))
+            if not cursor.fetchone() and sender == "user":
+                folder_name = text.split('\n')[0][:30] + "..." if len(text.split('\n')[0]) > 30 else text.split('\n')[0]
+                cursor.execute(f"INSERT INTO chat_sessions (username, session_id, folder_title) VALUES ({param}, {param}, {param})", (clean_user, session_id, folder_name))
+            
+            cursor.execute(f"INSERT INTO logs (username, session_id, sender, message_text) VALUES ({param}, {param}, {param}, {param})", (clean_user, session_id, sender, text))
             conn.commit()
         cursor.close()
         conn.close()
@@ -182,6 +193,25 @@ def validate_user_login_db(uid, pwd):
     except Exception:
         return False
 
+def recover_user_password_db(uid):
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        param = "%s" if USING_CLOUD_DB else "?"
+        clean_uid = str(uid).strip().lower()
+        cursor.execute(f"SELECT student_pwd, is_active FROM student_profiles WHERE LOWER(student_uid) = LOWER({param})", (clean_uid,))
+        row = cursor.fetchone()
+        cursor.close()
+        conn.close()
+        if row:
+            if int(row[1]) == 1:
+                return {"status": "success", "password": row[0]}
+            else:
+                return {"status": "deactivated"}
+        return {"status": "not_found"}
+    except Exception:
+        return {"status": "error"}
+
 def fetch_all_users_raw():
     try:
         conn = get_db_connection()
@@ -215,29 +245,31 @@ def delete_user_from_db(uid):
         conn.commit()
         cursor.close()
         conn.close()
+        return True
     except Exception:
-        pass
+        return False
 
-def delete_single_prompt_db(username, message_text):
+# NEW: Deletes an entire session conversation folder from storage ledgers
+def delete_entire_session_db(session_id):
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
         param = "%s" if USING_CLOUD_DB else "?"
-        clean_user = str(username).strip().lower()
-        cursor.execute(f"DELETE FROM logs WHERE LOWER(username) = LOWER({param}) AND message_text = {param}", (clean_user, message_text))
+        cursor.execute(f"DELETE FROM logs WHERE session_id = {param}", (session_id,))
+        cursor.execute(f"DELETE FROM chat_sessions WHERE session_id = {param}", (session_id,))
         conn.commit()
         cursor.close()
         conn.close()
     except Exception:
         pass
 
-def load_user_chat_history(username):
+# NEW: Loads specific logs tied only to the active folder session node
+def load_session_chat_history(session_id):
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
         param = "%s" if USING_CLOUD_DB else "?"
-        clean_user = str(username).strip().lower()
-        cursor.execute(f"SELECT sender, message_text FROM logs WHERE LOWER(username) = LOWER({param}) ORDER BY id ASC", (clean_user,))
+        cursor.execute(f"SELECT sender, message_text FROM logs WHERE session_id = {param} ORDER BY id ASC", (session_id,))
         rows = cursor.fetchall()
         cursor.close()
         conn.close()
@@ -245,35 +277,44 @@ def load_user_chat_history(username):
     except Exception:
         return []
 
-def get_unique_sidebar_titles(username):
+# NEW: Fetches folder nodes with nested prompts mapped precisely inside
+def get_session_folders_structure(username):
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
         clean_user = str(username).strip().lower()
         param = "%s" if USING_CLOUD_DB else "?"
-        cursor.execute(f"SELECT DISTINCT message_text FROM logs WHERE LOWER(username) = LOWER({param}) AND sender='user' ORDER BY id DESC", (clean_user,))
-        rows = cursor.fetchall()
+        
+        cursor.execute(f"SELECT session_id, folder_title FROM chat_sessions WHERE LOWER(username) = LOWER({param}) ORDER BY id DESC", (clean_user,))
+        folders = cursor.fetchall()
+        
+        structure = []
+        for sess_id, title in folders:
+            cursor.execute(f"SELECT message_text FROM logs WHERE session_id={param} AND sender='user' ORDER BY id ASC", (sess_id,))
+            prompts = [r[0] for r in cursor.fetchall()]
+            structure.append({"session_id": sess_id, "folder_title": title, "sub_prompts": prompts})
+            
         cursor.close()
         conn.close()
-        return [r[0] for r in rows][:10]
+        return structure
     except Exception:
         return []
 
 def callback_clear_session():
     st.session_state.chat_history = []
-    st.session_state.sidebar_queries = []
     st.session_state.active_payload = ""
+    st.session_state.current_session_id = str(uuid.uuid4()) # Generate new distinct timeline ID
 
 def callback_system_logout():
     st.session_state.login_role = None
     st.session_state.login_username = None
     st.session_state.chat_history = []
-    st.session_state.sidebar_queries = []
+    st.session_state.current_session_id = str(uuid.uuid4())
 
 init_db()
 
 # =====================================================================
-#  🔒 SECURITY ACCESS PATTERNS
+#  🔒 SECURITY ACCESS PATTERNS WITH RECOVERY SYSTEM
 # =====================================================================
 ADMIN_UID, ADMIN_PWD = "adminmg", "Pritam#@2006"
 
@@ -281,7 +322,7 @@ def render_login_interface():
     st.markdown("<h1 style='text-align: center; font-weight: 900; background: linear-gradient(135deg, #4a90e2, #ff7e5f); -webkit-background-clip: text; -webkit-text-fill-color: transparent;'>⚡ Offline Agent.Ai</h1>", unsafe_allow_html=True)
     st.markdown("<p style='text-align: center; margin-top: -10px; font-weight: 600;'>Advanced Multimodal Automation Hub</p>", unsafe_allow_html=True)
     
-    tab_login, tab_signup, tab_admin = st.tabs(["👤 User Access Login", "📝 Create Secure Account", "🔒 Administrator Hub Portal"])
+    tab_login, tab_signup, tab_forgot, tab_admin = st.tabs(["👤 User Access Login", "📝 Create Secure Account", "🔑 Forgot Key Recovery", "🔒 Administrator Hub Portal"])
     
     with tab_login:
         with st.form("student_login_form"):
@@ -293,8 +334,8 @@ def render_login_interface():
                 elif validate_user_login_db(u_name.strip(), u_pass.strip()):
                     st.session_state.login_role = "user"
                     st.session_state.login_username = u_name.strip().lower()
-                    st.session_state.chat_history = load_user_chat_history(u_name.strip())
-                    st.session_state.sidebar_queries = get_unique_sidebar_titles(u_name.strip())
+                    st.session_state.chat_history = []
+                    st.session_state.current_session_id = str(uuid.uuid4())
                     st.rerun()
                 else: 
                     st.error("❌ Invalid authorization parameters.")
@@ -316,6 +357,24 @@ def render_login_interface():
                         st.success("🎉 Node registered! Proceed to login panel.")
                     else: 
                         st.error("⚠️ Username token conflict across registry arrays.")
+
+    with tab_forgot:
+        st.markdown("### 🔑 Account Password Retrieval Protocol")
+        with st.form("password_recovery_form"):
+            recovery_uid = st.text_input("Registered User ID Token", placeholder="Type your User ID here...")
+            if st.form_submit_button("Retrieve Password Key 🔓", use_container_width=True):
+                if not recovery_uid.strip():
+                    st.error("❌ Please provide a valid User ID token to run lookups.")
+                else:
+                    result = recover_user_password_db(recovery_uid.strip())
+                    if result["status"] == "success":
+                        st.success(f"🔑 Core Match Found! Your registered Workspace Privacy Key is: **{result['password']}**")
+                    elif result["status"] == "deactivated":
+                        st.warning("⚠️ Access Registry Alert: That account node is currently deactivated by the admin.")
+                    elif result["status"] == "not_found":
+                        st.error("❌ No profile record matches that User ID token within the database ledger.")
+                    else:
+                        st.error("❌ Processing fault along backend database connections.")
                         
     with tab_admin:
         with st.form("admin_login_form"):
@@ -326,7 +385,7 @@ def render_login_interface():
                     st.session_state.login_role = "admin"
                     st.session_state.login_username = "system_admin"
                     st.session_state.chat_history = []
-                    st.session_state.sidebar_queries = get_unique_sidebar_titles("system_admin")
+                    st.session_state.current_session_id = str(uuid.uuid4())
                     st.rerun()
                 else: 
                     st.error("❌ Administrative validation failed.")
@@ -348,7 +407,6 @@ def query_live_search(query: str) -> str:
         return f"\n[LIVE SEARCH ENGINE REFERENCE HARVESTPACK:\n{' '.join(contexts)}\n]"
     except Exception:
         try:
-            # Secondary backup Google News RSS content harvesting loop
             feed = feedparser.parse(f"https://news.google.com/rss/search?q={query}&hl=en-IN&gl=IN&ceid=IN:en")
             headlines = [f"Scraped Insight: {e.title}" for e in feed.entries[:4]]
             return f"\n[REAL-TIME SEARCH RECOVERY MATRICES: {' | '.join(headlines)}]"
@@ -361,16 +419,14 @@ def query_live_search(query: str) -> str:
 with st.sidebar:
     st.image("https://img.icons8.com/nolan/128/artificial-intelligence.png", width=50)
     st.markdown("<h2 style='margin:0;'>Offline Agent.Ai</h2>", unsafe_allow_html=True)
-    st.caption(f"Secure Node Session ID: `{st.session_state.login_username}` | Layer: `{st.session_state.login_role.upper()}`")
+    st.caption(f"Secure Node ID: `{st.session_state.login_username}` | Layer: `{st.session_state.login_role.upper()}`")
     
     st.markdown("---")
     cfg_tone = st.selectbox("🎭 Active Agent Persona Matrix", ["Standard Agent", "Expert Professor", "Code Auditor", "Brief Summary Node"])
     
-    # PREMIUM USER DISPLAY AREA
     if st.session_state.login_role == "user":
         st.markdown("<div style='background: #f1f5f9; padding: 12px; border-radius: 10px; margin-bottom: 10px;'>🌟 <b>User Workspace Active</b><br><small>Fully functional, autonomous pipeline ready.</small></div>", unsafe_allow_html=True)
 
-    # HIGHLY IMPROVED COMPREHENSIVE ADMINISTRATIVE DASHBOARD UI PANEL
     if st.session_state.login_role == "admin":
         st.markdown("---")
         st.subheader("🛠️ Core Administration Node")
@@ -395,24 +451,41 @@ with st.sidebar:
                             st.rerun()
                     st.markdown("<hr style='margin:6px 0; border: 0.5px solid #cbd5e1;'/>", unsafe_allow_html=True)
             
+    # =====================================================================
+    #  📂 NESTED SESSION HISTORY RECONSTRUCTION (CHATGPT STYLE FOLDERS)
+    # =====================================================================
     st.markdown("---")
-    st.subheader("📋 Session Prompt History Registry")
-    st.session_state.sidebar_queries = get_unique_sidebar_titles(st.session_state.login_username)
+    st.subheader("📁 Session Prompt History Registry")
     
-    if st.session_state.sidebar_queries:
-        for past_prompt in st.session_state.sidebar_queries:
-            display_title = past_prompt.split('\n')[0][:25] + "..." if len(past_prompt.split('\n')[0]) > 25 else past_prompt.split('\n')[0]
-            col_side_btn, col_side_del = st.columns([4.0, 1.0])
-            with col_side_btn:
-                if st.button(f"💬 {display_title}", key=f"side_{past_prompt}", use_container_width=True):
-                    st.session_state.active_payload = past_prompt
-                    st.rerun()
-            with col_side_del:
-                if st.button("❌", key=f"del_prompt_{past_prompt}", use_container_width=True):
-                    delete_single_prompt_db(st.session_state.login_username, past_prompt)
-                    st.rerun()
+    session_folders = get_session_folders_structure(st.session_state.login_username)
+    
+    if session_folders:
+        for folder in session_folders:
+            # Main folder expander link mimicking ChatGPT sidebar layout trees
+            with st.expander(f"📁 {folder['folder_title']}", expanded=(st.session_state.current_session_id == folder['session_id'])):
+                col_load, col_wipe = st.columns([4.0, 1.0])
+                with col_load:
+                    if st.button("📂 Open Session", key=f"open_{folder['session_id']}", use_container_width=True):
+                        st.session_state.current_session_id = folder['session_id']
+                        st.session_state.chat_history = load_session_chat_history(folder['session_id'])
+                        st.rerun()
+                with col_wipe:
+                    if st.button("🗑️", key=f"wipe_{folder['session_id']}", use_container_width=True):
+                        delete_entire_session_db(folder['session_id'])
+                        if st.session_state.current_session_id == folder['session_id']:
+                            callback_clear_session()
+                        st.rerun()
+                
+                # Render internal prompt logs as sub-items inside the target conversation folder
+                st.markdown("<div style='padding-left:10px; border-left:2px solid #cbd5e1; margin-top:5px;'>", unsafe_allow_html=True)
+                for q_idx, sub_prompt in enumerate(folder['sub_prompts'][:5]):
+                    short_q = sub_prompt[:28] + "..." if len(sub_prompt) > 28 else sub_prompt
+                    if st.button(f"📄 Q{q_idx+1}: {short_q}", key=f"sub_{folder['session_id']}_{q_idx}", use_container_width=True):
+                        st.session_state.active_payload = sub_prompt
+                        st.rerun()
+                st.markdown("</div>", unsafe_allow_html=True)
     else:
-        st.caption("Prompt registry matrix clear.")
+        st.caption("No conversational history structures recorded.")
             
     st.markdown("---")
     st.subheader("📋 Academic Project Registry")
@@ -430,7 +503,11 @@ with st.sidebar:
 #  💬 INTERACTIVE DISPLAY STREAM 
 # =====================================================================
 st.markdown("<h2 style='margin-bottom:0;'>⚡ Offline Agent.Ai Dashboard</h2>", unsafe_allow_html=True)
-st.caption("Advanced Real-Time Multimodal Reasoning & Synthesis Framework Engine")
+st.caption(f"Session Token Array ID: `{st.session_state.current_session_id}`")
+
+# Fetch fresh log state tracking variables context matching user viewport shifts
+if not st.session_state.chat_history and st.session_state.current_session_id:
+    st.session_state.chat_history = load_session_chat_history(st.session_state.current_session_id)
 
 if len(st.session_state.chat_history) > 0:
     for idx, msg in enumerate(st.session_state.chat_history):
@@ -439,7 +516,6 @@ if len(st.session_state.chat_history) > 0:
 
 st.markdown("---")
 
-# IMPROVED HIGH-FIDELITY SPEECH TRANSLATION PIPELINE INTERFACE
 col_file, col_mic = st.columns([6.0, 6.0])
 file_context, mic_transcription = "", None
 
@@ -463,7 +539,6 @@ with st.form("central_agent_search_boundary", clear_on_submit=True):
     with col_btn:
         triggered = st.form_submit_button("Execute Run 🚀", use_container_width=True)
 
-# Synchronized resolution execution maps
 final_query = ""
 if triggered and ui_input.strip(): final_query = ui_input.strip()
 elif mic_transcription: final_query = mic_transcription.strip()
@@ -480,10 +555,8 @@ if final_query:
         placeholder = st.empty()
         placeholder.markdown("🧠 **Offline Agent.Ai engine evaluating prompt matrices... running dynamic search lookups...**")
         
-        # Continuous fallback web harvesting checks matching ChatGPT capability
         web_data = query_live_search(final_query)
             
-        # DISTINCT PERSONA MATRIX BEHAVIOR SPECIFICATIONS
         if cfg_tone == "Standard Agent":
             persona_behavior = """You must respond as a balanced, direct, and elite generalist agent.
             Act like an all-knowing technical oracle. Balance code execution parameters with clear, concise conversational layout structures."""
@@ -499,7 +572,6 @@ if final_query:
             persona_behavior = """CRITICAL PERSISTENCE: You are a high-speed data compression node. 
             You MUST compress your whole final response answer down to exactly three dense, informative bullet points. No intro text, no conversational sign-offs."""
 
-        # COMPREHENSIVE INTELLIGENCE COMPLIANCE PACK FOR THE MODEL CORE
         rules = f"""System Context Configuration: You are the premium cloud-augmented multi-agent system layer of 'Offline Agent.Ai', custom-engineered by Mrinal Gorain from Nalhati Government Polytechnic, Computer Science & Technology department.
 Project portfolio architecture layouts and systems design records were structurally compiled by Prami Hazra and Sanchari Choudhury.
 
@@ -521,23 +593,24 @@ CONTEXT REFERENCE HARVESTPACK (REAL-TIME INTERNET SEARCH DATA PROTOCOLS):
                 {"role": "user", "content": payload_string}
             ],
             "max_tokens": 1200,
-            "temperature": 0.1 # Reduced variance to preserve absolute persona compliance alignment
+            "temperature": 0.1
         }
         
         try:
-            save_message(st.session_state.login_username, "user", display_string)
+            # NEW: Message save pipeline incorporates current_session_id mapping to isolate threads safely
+            save_message(st.session_state.login_username, st.session_state.current_session_id, "user", display_string)
 
             response = requests.post(CLOUD_INFERENCE_URL, headers=headers, json=chat_payload, timeout=18)
             res_json = response.json()
             full_text = res_json["choices"][0]["message"]["content"].strip()
             
-            save_message(st.session_state.login_username, "assistant", full_text)
+            save_message(st.session_state.login_username, st.session_state.current_session_id, "assistant", full_text)
             
             st.session_state.chat_history.append({"role": "user", "content": display_string})
             st.session_state.chat_history.append({"role": "assistant", "content": full_text})
             
             with placeholder.container():
-                st.markdown(f"膜 **Your Input Query Vector:** <div class='chat-card'>{display_string}</div>", unsafe_allow_html=True)
+                st.markdown(f"👤 **Your Input Query Vector:** <div class='chat-card'>{display_string}</div>", unsafe_allow_html=True)
                 st.markdown(f"⚡ **Offline Agent.Ai Response Layer:** <div class='chat-card'>{full_text}</div>", unsafe_allow_html=True)
                 
             time.sleep(0.1)
