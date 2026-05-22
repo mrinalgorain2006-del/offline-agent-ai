@@ -319,7 +319,7 @@ def render_login_interface():
                         
     with tab_admin:
         with st.form("admin_login_form"):
-            a_name = st.text_input("Admin Matrix ID ID")
+            a_name = st.text_input("Admin Matrix ID")
             a_pass = st.text_input("Master Secure Authorization Pass", type="password")
             if st.form_submit_button("Authenticate Administrative Shell 🔓", use_container_width=True):
                 if a_name == ADMIN_UID and a_pass == ADMIN_PWD:
