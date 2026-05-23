@@ -9,6 +9,7 @@ import sys
 import os
 import io
 import uuid
+import wikipedia  # Safe, open-source Wikipedia engine completely compatible with your environments
 
 # Silently ignore local self-signed SSL warning flags
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
@@ -131,14 +132,20 @@ def save_message(username, session_id, sender, text):
         conn = get_db_connection()
         cursor = conn.cursor()
         param = "%s" if USING_CLOUD_DB else "?"
-        clean_user = str(username).strip().lower()
-        if clean_user != "":
+        
+        target_user = str(username).strip().lower() if username else "anonymous_node"
+        
+        if target_user != "":
             cursor.execute(f"SELECT session_id FROM chat_sessions WHERE session_id={param}", (session_id,))
             if not cursor.fetchone() and sender == "user":
-                folder_name = text.split('\n')[0][:30] + "..." if len(text.split('\n')[0]) > 30 else text.split('\n')[0]
-                cursor.execute(f"INSERT INTO chat_sessions (username, session_id, folder_title) VALUES ({param}, {param}, {param})", (clean_user, session_id, folder_name))
+                clean_title = text.replace("📎", "").split('\n')[0].strip()
+                folder_name = clean_title[:28] + "..." if len(clean_title) > 28 else clean_title
+                if not folder_name:
+                    folder_name = "New Agent Conversation Thread..."
+                    
+                cursor.execute(f"INSERT INTO chat_sessions (username, session_id, folder_title) VALUES ({param}, {param}, {param})", (target_user, session_id, folder_name))
             
-            cursor.execute(f"INSERT INTO logs (username, session_id, sender, message_text) VALUES ({param}, {param}, {param}, {param})", (clean_user, session_id, sender, text))
+            cursor.execute(f"INSERT INTO logs (username, session_id, sender, message_text) VALUES ({param}, {param}, {param}, {param})", (target_user, session_id, sender, text))
             conn.commit()
         cursor.close()
         conn.close()
@@ -274,10 +281,10 @@ def get_session_folders_structure(username):
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
-        clean_user = str(username).strip().lower()
         param = "%s" if USING_CLOUD_DB else "?"
+        target_user = str(username).strip().lower() if username else "anonymous_node"
         
-        cursor.execute(f"SELECT session_id, folder_title FROM chat_sessions WHERE LOWER(username) = LOWER({param}) ORDER BY id DESC", (clean_user,))
+        cursor.execute(f"SELECT session_id, folder_title FROM chat_sessions WHERE LOWER(username) = LOWER({param}) ORDER BY id DESC", (target_user,))
         folders = cursor.fetchall()
         
         structure = []
@@ -387,8 +394,24 @@ if st.session_state.login_role is None:
     st.stop()
 
 # =====================================================================
-#  🛰️ DYNAMIC SEARCH HARVESTING (GOOGLE EXTRACTION AGENT ROUTING)
+#  🛰️ MULTI-STAGE RETRIEVAL ENGINE (WIKIPEDIA + GOOGLE FALLBACK)
 # =====================================================================
+def query_wikipedia_layer(query: str) -> str:
+    """Integrated lookup module pulling clean data from Wikipedia natively."""
+    try:
+        wikipedia.set_user_agent("OfflineAgentAI/1.0 (cst_dept@polytechnic.edu)")
+        summary_text = wikipedia.summary(query, sentences=3)
+        if summary_text:
+            return f"\n[OFFICIAL WIKIPEDIA FACTUAL DATABASE MATRIX:\nTopic context: {query}\nVerified Data: {summary_text}\n---]"
+    except wikipedia.exceptions.DisambiguationError as e:
+        try:
+            alt_summary = wikipedia.summary(e.options[0], sentences=2)
+            return f"\n[OFFICIAL WIKIPEDIA FACTUAL MATRIX (Resolved alternative): {alt_summary}]"
+        except: pass
+    except Exception:
+        pass
+    return ""
+
 def query_live_search(query: str) -> str:
     """Dynamic multi-tier fallback searching mechanism mimicking enterprise agents."""
     try:
@@ -406,11 +429,21 @@ def query_live_search(query: str) -> str:
             return "\n[Notice: Web harvesting layers are clear, running on foundational logic arrays.]"
 
 # =====================================================================
+#  🖥️ SAFE MARKDOWN VISUAL FORMATTER FUNCTION (PREVENTS HTML ACCIDENTALS)
+# =====================================================================
+def safe_render_chat_card(role_label, text_content):
+    """Detects raw code markers to dynamically route rendering formats cleanly."""
+    if "```" in text_content:
+        st.markdown(f"⚡ **Offline Agent.Ai ({role_label} Mode) View:**")
+        st.markdown(text_content)
+    else:
+        st.markdown(f"<div class='chat-card'><b>{role_label}:</b><br>{text_content}</div>", unsafe_allow_html=True)
+
+# =====================================================================
 #  🎛️ SIDEBAR INTERACTIVE CONSOLE CONTROL PANEL
 # =====================================================================
 with st.sidebar:
-    st.image("https://img.icons8.com/nolan/128/artificial-intelligence.png", width=50)
-    st.markdown("<h2 style='margin:0;'>Offline Agent.Ai</h2>", unsafe_allow_html=True)
+    st.markdown("<h2 style='margin:0; padding-bottom:10px;'>🤖 Offline Agent.Ai</h2>", unsafe_allow_html=True)
     st.caption(f"Secure Node ID: `{st.session_state.login_username}` | Layer: `{st.session_state.login_role.upper()}`")
     
     st.markdown("---")
@@ -419,7 +452,6 @@ with st.sidebar:
     if st.session_state.login_role == "user":
         st.markdown("<div style='background: #f1f5f9; padding: 12px; border-radius: 10px; margin-bottom: 10px;'>🌟 <b>User Workspace Active</b><br><small>Fully functional, autonomous pipeline ready.</small></div>", unsafe_allow_html=True)
 
-    # 🚨 HIDE MANAGE PANEL: Rolled completely inside strict conditional isolation check wrappers
     if st.session_state.login_role == "admin":
         st.markdown("---")
         st.subheader("🛠️ Core Administration Node")
@@ -502,7 +534,10 @@ if not st.session_state.chat_history and st.session_state.current_session_id:
 if len(st.session_state.chat_history) > 0:
     for idx, msg in enumerate(st.session_state.chat_history):
         with st.chat_message(msg["role"]):
-            st.markdown(f"<div class='chat-card'>{msg['content']}</div>", unsafe_allow_html=True)
+            if msg["role"] == "assistant":
+                safe_render_chat_card(cfg_tone, msg['content'])
+            else:
+                st.markdown(f"<div class='chat-card'>{msg['content']}</div>", unsafe_allow_html=True)
 
 st.markdown("---")
 
@@ -541,41 +576,68 @@ if final_query:
     if uploaded: display_string += f" 📎 ({uploaded.name})"
     payload_string = f"{final_query} {file_context}"
     
+    # 🧠 =====================================================================
+    #  ⚡ GEMINI-TYPE REAL-TIME INTENT ROUTER GATING SYSTEM
+    # =====================================================================
+    is_casual_greeting = final_query.strip().lower() in [
+        "hi", "hello", "hey", "greetings", "good morning", "good afternoon", "yo", "sup"
+    ]
+    
     with st.chat_message("assistant"):
         placeholder = st.empty()
-        placeholder.markdown("🧠 **Offline Agent.Ai engine evaluating prompt matrices... running dynamic search lookups...**")
+        placeholder.markdown("🧠 **Offline Agent.Ai evaluating query routing intent...**")
         
-        web_data = query_live_search(final_query)
+        # Multi-stage fact retrieval execution (Bypassed if query is a simple greeting)
+        if is_casual_greeting:
+            fact_context = "[Notice: User has initialized a casual chat greeting. Reference pack generation unnecessary.]"
+        else:
+            fact_context = query_wikipedia_layer(final_query)
+            if not fact_context.strip():
+                fact_context = query_live_search(final_query)
             
+        # =====================================================================
+        #  🎯 ADAPTIVE PERSONA CONFIGURATION PATTERNS
+        # =====================================================================
+        active_temperature = 0.1
         if cfg_tone == "Standard Agent":
-            persona_behavior = """You must respond as a balanced, direct, and elite generalist agent.
-            Act like an all-knowing technical oracle. Balance code execution parameters with clear, concise conversational layout structures."""
+            active_temperature = 0.7  # Creative allowance for dynamic dialogue flow
+            persona_behavior = """ROLE: You are an elite, natural general-purpose assistant.
+            STYLE: Maintain a balanced, helpful, friendly, and highly clear conversational tone.
+            OUTPUT RULES: If the user says 'Hi' or greets you, reply naturally with a warm welcome message (e.g., 'Hello! How can I assist you today?'). Do not analyze character definitions or alphabet positions."""
+            
         elif cfg_tone == "Expert Professor":
-            persona_behavior = """CRITICAL PERSISTENCE: You are an advanced academic professor holding multiple PhD titles. 
-            Your response style MUST be deeply educational, highly pedagogical, heavily structured, and verbose. 
-            Incorporate complete historical or scientific context arrays, clear technical citations, and detailed breakdowns of fundamental theory theorems."""
+            active_temperature = 0.6  # High explanatory flow parameters
+            persona_behavior = """ROLE: You are an advanced university Academic Professor holding dual PhD credentials.
+            STYLE: Deeply technical, pedagogical, exhaustive, and verbose. Use complex educational terminology.
+            OUTPUT RULES: Break down theories, historical backgrounds, and cite fundamental theorems. If the user greets you with 'Hi', greet them back warmly as a mentor before initiating standard operational loops."""
+            
         elif cfg_tone == "Code Auditor":
-            persona_behavior = """CRITICAL PERSISTENCE: You are a strict Senior Software Architect and Security Auditor. 
-            Your behavior matrix must emphasize complete performance edge-case evaluation, strict syntax validation checking, algorithm big-O analysis, and robust vulnerability tracking patterns. 
-            Do not provide fluff; analyze code fragments rigorously or generate production-ready implementations."""
+            active_temperature = 0.1  # Strict deterministic code checking layout
+            persona_behavior = """ROLE: You are a ruthless Senior Software Security Auditor and System Architect.
+            STYLE: Direct, highly analytical, objective, and entirely formal. No friendly chat or generic introductions. Output clean markdown code elements where code blocks are produced.
+            OUTPUT RULES: Analyze data or problems purely through code fragments, execution tracking limits, syntax edge-cases, algorithms, big-O efficiency matrix scales, or robust infrastructure vulnerability models."""
+            
         elif cfg_tone == "Brief Summary Node":
-            persona_behavior = """CRITICAL PERSISTENCE: You are a high-speed data compression node. 
-            You MUST compress your whole final response answer down to exactly three dense, informative bullet points. No intro text, no conversational sign-offs."""
+            active_temperature = 0.1  # Strict deterministic data compression
+            persona_behavior = """ROLE: You are a high-speed data compression pipeline.
+            STYLE: Ultra-compact, dense, and minimalist. 
+            OUTPUT RULES: Compress your entire final answer into exactly three high-impact, short bullet points. Do not include introductory text, explanations, or sign-offs under any condition."""
 
-        # MANDATORY REAL-TIME CONTROL MATRIX ENFORCED
-        rules = f"""System Context Configuration: You are the premium cloud-augmented multi-agent system layer of 'Offline Agent.Ai', custom-engineered by Mrinal Gorain from Nalhati Government Polytechnic, Computer Science & Technology department.
-Project portfolio architecture layouts and systems design records were structurally compiled by Prami Hazra and Sanchari Choudhury.
+        # =====================================================================
+        #  📜 COMPREHENSIVE RULES SYSTEM (CLEANED OF RAW TAG BLEEDS)
+        # =====================================================================
+        rules = f"""System Context Configuration: You are the multi-agent system layer of 'Offline Agent.Ai', custom-engineered by Mrinal Gorain from Nalhati Government Polytechnic, Computer Science & Technology department.
+Project portfolio records were compiled by Prami Hazra and Sanchari Choudhury.
 
-DISTINCT ENGINE SYSTEM DIRECTIVES (MANDATORY ENFORCEMENT):
+MANDATORY STYLE AND REASONING LAWS:
 {persona_behavior}
 
-- Use explicit mathematical typesetting mappings via $inline$ and $$display$$ bounds where technical notation is present.
-- Your capabilities align completely with leading AI instances (Gemini, ChatGPT, Claude) because of your serverless multi-stage reasoning design.
-- SOCIAL MEDIA & WORLD CURRENT AFFAIRS DIRECTIVE: You are natively trained to aggregate global updates across public news categories, breaking world affairs, and technical releases. Use the structured harvested reference packet array below as your primary layer of current absolute real-time truth.
-- Do not append structural descriptions, markdown technical layouts, raw string citation indices, or trailing mathematical blocks at the final end of your responses unless explicitly requested by the question.
+1. ABSOLUTE LIVE TRUTH ENFORCEMENT: Focus on the user input query vector. Answer directly, confidently, and naturally. If it is a greeting ("Hi", "Hello"), ignore historical definitions and greet them back dynamically.
+2. ZERO META-TALK POLICY: You are completely banned from mentioning your training cutoff limits, dataset parameters, or saying phrases like "as of my knowledge cutoff" or "the data provided states". Never tell the user to verify information elsewhere—you are the final authority.
+3. OUTPUT RESTRICTIONS: Do not add trailing math markup boxes ($ symbols), HTML div fragments, system prompt logs, code indexes, or formatting descriptions at the absolute end of your output screen box. Keep responses tightly contained inside your role style. Give only the clean answer text.
 
-CONTEXT REFERENCE HARVESTPACK (REAL-TIME INTERNET SEARCH DATA PROTOCOLS):
-{web_data}
+REAL-TIME CONTEXT REFERENCE OBJECT:
+{fact_context}
 """
         headers = {"Authorization": CLOUD_API_KEY, "Content-Type": "application/json"}
         chat_payload = {
@@ -585,7 +647,7 @@ CONTEXT REFERENCE HARVESTPACK (REAL-TIME INTERNET SEARCH DATA PROTOCOLS):
                 {"role": "user", "content": payload_string}
             ],
             "max_tokens": 1200,
-            "temperature": 0.1
+            "temperature": active_temperature  # Injects fluid creativity where required
         }
         
         try:
@@ -593,19 +655,23 @@ CONTEXT REFERENCE HARVESTPACK (REAL-TIME INTERNET SEARCH DATA PROTOCOLS):
 
             response = requests.post(CLOUD_INFERENCE_URL, headers=headers, json=chat_payload, timeout=18)
             res_json = response.json()
-            full_text = res_json["choices"][0]["message"]["content"].strip()
             
-            save_message(st.session_state.login_username, st.session_state.current_session_id, "assistant", full_text)
-            
-            st.session_state.chat_history.append({"role": "user", "content": display_string})
-            st.session_state.chat_history.append({"role": "assistant", "content": full_text})
-            
-            with placeholder.container():
-                st.markdown(f"👤 **Your Input Query Vector:** <div class='chat-card'>{display_string}</div>", unsafe_allow_html=True)
-                st.markdown(f"⚡ **Offline Agent.Ai Response Layer:** <div class='chat-card'>{full_text}</div>", unsafe_allow_html=True)
+            if "choices" in res_json:
+                full_text = res_json["choices"][0]["message"]["content"].strip()
                 
-            time.sleep(0.1)
-            st.rerun()
+                save_message(st.session_state.login_username, st.session_state.current_session_id, "assistant", full_text)
+                st.session_state.chat_history.append({"role": "user", "content": display_string})
+                st.session_state.chat_history.append({"role": "assistant", "content": full_text})
+                
+                with placeholder.container():
+                    st.markdown(f"👤 **Your Input Query Vector:** <div class='chat-card'>{display_string}</div>", unsafe_allow_html=True)
+                    safe_render_chat_card(cfg_tone, full_text)
+                    
+                time.sleep(0.1)
+                st.rerun()
+            else:
+                error_msg = res_json.get("error", "Unknown cloud routing response mismatch.")
+                placeholder.error(f"⚠️ Hugging Face Engine Exception: {error_msg}")
             
         except Exception as ex:
             placeholder.error(f"Cloud Inference Engine routing exception block: {str(ex)}")
