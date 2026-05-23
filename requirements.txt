@@ -6,3 +6,4 @@ pypdf
 streamlit-mic-recorder
 duckduckgo-search
 psycopg2-binary
+wikipedia
