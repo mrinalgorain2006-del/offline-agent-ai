@@ -53,11 +53,22 @@ st.markdown("""
         font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important;
     }
     
-    /* Sleek Sidebar Customization */
+    /* 🚨 FIXED AND STABILIZED SIDEBAR WIDTH FOR DESKTOP VIEWPORTS */
     [data-testid="stSidebar"] {
-        background: rgba(255, 255, 255, 0.9) !important;
-        backdrop-filter: blur(12px) !important;
+        background: rgba(255, 255, 255, 0.93) !important;
+        backdrop-filter: blur(16px) !important;
         border-right: 1px solid rgba(226, 232, 240, 0.8) !important;
+    }
+    
+    @media (min-width: 992px) {
+        [data-testid="stSidebar"], [data-testid="stSidebar"] > div:first-child {
+            width: 380px !important;
+            min-width: 380px !important;
+            max-width: 380px !important;
+        }
+        [data-testid="stAppViewContainer"] {
+            margin-left: 0px !important;
+        }
     }
     
     /* Modern Input, Selection Box, and Textarea Fields */
@@ -139,6 +150,7 @@ st.markdown("""
         border: 1px solid #e2e8f0 !important;
         border-radius: 12px !important;
         font-weight: 600 !important;
+        padding: 8px 14px !important;
         transition: all 0.2s ease !important;
     }
     div[data-testid="stSidebar"] button:hover, div[data-testid="stHorizontalBlock"] button:hover {
