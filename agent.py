@@ -23,8 +23,23 @@ except ImportError:
 from streamlit_mic_recorder import speech_to_text
 
 # =====================================================================
-#  ☀️ INITIALIZATION & EXTRA-PREMIUM VISUAL ENGINE (NEOMORPHIC LIGHT MODE)
+#  ☀️ 1. STRUCTURAL INITIALIZATION & SESSION REGISTER (CRITICAL BUG FIX)
 # =====================================================================
+# These state dictionary initializations MUST run before ANY page checks execute!
+if "login_role" not in st.session_state:
+    st.session_state.login_role = None  
+if "login_username" not in st.session_state:
+    st.session_state.login_username = None
+if "chat_history" not in st.session_state:
+    st.session_state.chat_history = []
+if "sidebar_queries" not in st.session_state:
+    st.session_state.sidebar_queries = []
+if "active_payload" not in st.session_state:
+    st.session_state.active_payload = ""
+if "current_session_id" not in st.session_state:
+    st.session_state.current_session_id = str(uuid.uuid4())
+
+# Set up page configurations safely now that state registers are completely initialized
 st.set_page_config(
     page_title="Offline Agent.Ai - Immersive Intelligence Hub", 
     page_icon="⚡", 
@@ -479,6 +494,7 @@ def render_login_interface():
                 else: 
                     st.error("❌ Administrative validation failed.")
 
+# Check the user authentication block status cleanly now that variables are guaranteed to exist
 if st.session_state.login_role is None:
     render_login_interface()
     st.stop()
