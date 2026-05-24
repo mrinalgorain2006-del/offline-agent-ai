@@ -25,7 +25,6 @@ from streamlit_mic_recorder import speech_to_text
 # =====================================================================
 #  ☀️ 1. STRUCTURAL INITIALIZATION & SESSION REGISTER (CRITICAL BUG FIX)
 # =====================================================================
-# These state dictionary initializations MUST run before ANY page checks execute!
 if "login_role" not in st.session_state:
     st.session_state.login_role = None  
 if "login_username" not in st.session_state:
@@ -39,7 +38,7 @@ if "active_payload" not in st.session_state:
 if "current_session_id" not in st.session_state:
     st.session_state.current_session_id = str(uuid.uuid4())
 
-# Set up page configurations safely now that state registers are completely initialized
+# Set up page configurations safely
 st.set_page_config(
     page_title="Offline Agent.Ai - Immersive Intelligence Hub", 
     page_icon="⚡", 
@@ -68,7 +67,7 @@ st.markdown("""
         font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important;
     }
     
-    /* STABILIZED DESKTOP SIDEBAR WIDTH FIX */
+    /* FIX FOR SIDEBAR CONSTANT WIDTH AND RESPONSIVE CANVASES */
     [data-testid="stSidebar"] {
         background: rgba(255, 255, 255, 0.93) !important;
         backdrop-filter: blur(16px) !important;
@@ -81,9 +80,12 @@ st.markdown("""
             min-width: 380px !important;
             max-width: 380px !important;
         }
-        [data-testid="stAppViewContainer"] {
-            margin-left: 0px !important;
-        }
+    }
+    
+    /* FIX FOR LOGIN TAB TEXT VISIBILITY (PREVENTS EMPTY BLUE AREA) */
+    button[data-baseweb="tab"] p, button[data-baseweb="tab"] span {
+        color: #1e3a8a !important;
+        font-weight: 700 !important;
     }
     
     /* Modern Input, Selection Box, and Textarea Fields */
@@ -100,97 +102,49 @@ st.markdown("""
         background-color: #ffffff !important;
     }
     
-    /* Form Input Element Overrides */
     input, select, textarea, [data-baseweb="select"] div {
         color: #0f172a !important;
         -webkit-text-fill-color: #0f172a !important;
         font-weight: 500 !important;
     }
     
-    /* File Uploader Container */
     [data-testid="stFileUploader"] {
         background-color: rgba(255, 255, 255, 0.7) !important;
         border: 2px dashed #cbd5e1 !important;
         border-radius: 20px !important;
         padding: 10px !important;
-        transition: all 0.2s ease !important;
-    }
-    [data-testid="stFileUploader"]:hover {
-        border-color: #3b82f6 !important;
-        background-color: #ffffff !important;
     }
     
-    /* Academic Registry Modern Presentation Cards */
     .team-box-blue { 
         background: linear-gradient(135deg, #ffffff 0%, #f0fdf4 100%) !important;
-        border: 1px solid #e2e8f0 !important;
-        border-left: 6px solid #3b82f6 !important;
+        border: 1px solid #e2e8f0 !important; border-left: 6px solid #3b82f6 !important;
         padding: 14px !important; border-radius: 14px !important; margin-bottom: 12px !important; 
-        box-shadow: 0 4px 6px -1px rgba(0,0,0,0.03);
     }
     .team-box-green { 
         background: linear-gradient(135deg, #ffffff 0%, #f0fdf4 100%) !important;
-        border: 1px solid #e2e8f0 !important;
-        border-left: 6px solid #10b981 !important;
+        border: 1px solid #e2e8f0 !important; border-left: 6px solid #10b981 !important;
         padding: 14px !important; border-radius: 14px !important; margin-bottom: 12px !important; 
-        box-shadow: 0 4px 6px -1px rgba(0,0,0,0.03);
     }
     .team-box-orange { 
         background: linear-gradient(135deg, #ffffff 0%, #fff7ed 100%) !important;
-        border: 1px solid #e2e8f0 !important;
-        border-left: 6px solid #f97316 !important;
+        border: 1px solid #e2e8f0 !important; border-left: 6px solid #f97316 !important;
         padding: 14px !important; border-radius: 14px !important; margin-bottom: 12px !important; 
-        box-shadow: 0 4px 6px -1px rgba(0,0,0,0.03);
     }
     
-    /* Premium Premium Glassmorphism Chat Bubble Containers */
     .chat-card { 
         background: rgba(255, 255, 255, 0.85) !important;
         backdrop-filter: blur(8px) !important;
         border: 1px solid rgba(226, 232, 240, 0.8) !important;
-        padding: 20px !important; 
-        border-radius: 24px !important; 
-        margin-bottom: 14px !important; 
-        line-height: 1.65 !important;
-        box-shadow: 0 10px 15px -3px rgba(15, 23, 42, 0.04), 0 4px 6px -2px rgba(15, 23, 42, 0.02) !important;
-        transition: transform 0.2s ease !important;
-    }
-    .chat-card:hover {
-        transform: translateY(-2px);
+        padding: 20px !important; border-radius: 24px !important; margin-bottom: 14px !important; 
+        box-shadow: 0 10px 15px -3px rgba(15, 23, 42, 0.04) !important;
     }
     
-    /* Interactive Button Transitions */
     div[data-testid="stSidebar"] button, div[data-testid="stHorizontalBlock"] button {
-        background-color: #ffffff !important;
-        border: 1px solid #e2e8f0 !important;
-        border-radius: 12px !important;
-        font-weight: 600 !important;
-        padding: 8px 14px !important;
-        transition: all 0.2s ease !important;
-    }
-    div[data-testid="stSidebar"] button:hover, div[data-testid="stHorizontalBlock"] button:hover {
-        background-color: #f8fafc !important;
-        border-color: #cbd5e1 !important;
-        transform: scale(1.01);
+        background-color: #ffffff !important; border: 1px solid #e2e8f0 !important; border-radius: 12px !important; font-weight: 600 !important;
     }
     div[data-testid="stFormSubmitButton"] button {
-        background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%) !important;
-        color: #ffffff !important;
-        border-radius: 16px !important;
-        border: none !important;
-        box-shadow: 0 4px 10px rgba(37, 99, 235, 0.2) !important;
-        font-weight: 700 !important;
+        background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%) !important; color: #ffffff !important; border-radius: 16px !important;
     }
-    div[data-testid="stFormSubmitButton"] button:hover {
-        background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%) !important;
-        box-shadow: 0 6px 14px rgba(37, 99, 235, 0.3) !important;
-    }
-    
-    /* Custom Mobile Scrollbar Enhancements */
-    ::-webkit-scrollbar { width: 6px; height: 6px; }
-    ::-webkit-scrollbar-track { background: transparent; }
-    ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
-    ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
     </style>
 """, unsafe_allow_html=True)
 
@@ -423,9 +377,10 @@ init_db()
 ADMIN_UID, ADMIN_PWD = "adminmg", "Pritam#@2006"
 
 def render_login_interface():
-    st.markdown("<h1 style='text-align: center; font-weight: 900; background: linear-gradient(135deg, #3b82f6, #8b5cf6); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 0;'>⚡ Offline Agent.Ai</h1>", unsafe_allow_html=True)
+    st.markdown("<h1 style='text-align: center; font-weight: 900; background: linear-gradient(135deg, #3b82f6, #8b5cf6); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 0; padding-top: 20px;'>⚡ Offline Agent.Ai</h1>", unsafe_allow_html=True)
     st.markdown("<p style='text-align: center; margin-top: 0; color: #64748b; font-weight: 600;'>Advanced Multimodal Automation Hub</p>", unsafe_allow_html=True)
     
+    # Text tags inside this tab section are dynamically configured for crisp color readability
     tab_login, tab_signup, tab_forgot, tab_admin = st.tabs(["👤 User Access Login", "📝 Create Secure Account", "🔑 Forgot Key Recovery", "🔒 Administrator Hub Portal"])
     
     with tab_login:
@@ -463,7 +418,7 @@ def render_login_interface():
                         st.error("⚠️ Username token conflict across registry arrays.")
 
     with tab_forgot:
-        st.markdown("<h4 style='margin-top: 10px;'>🔑 Account Password Retrieval Protocol</h4>", unsafe_allow_html=True)
+        st.markdown("<h4 style='margin-top: 10px; color: #0f172a;'>🔑 Account Password Retrieval Protocol</h4>", unsafe_allow_html=True)
         with st.form("password_recovery_form"):
             recovery_uid = st.text_input("Registered User ID Token", placeholder="Type your User ID here...")
             if st.form_submit_button("Retrieve Password Key 🔓", use_container_width=True):
@@ -494,7 +449,7 @@ def render_login_interface():
                 else: 
                     st.error("❌ Administrative validation failed.")
 
-# Check the user authentication block status cleanly now that variables are guaranteed to exist
+# Check the structural login condition gate cleanly
 if st.session_state.login_role is None:
     render_login_interface()
     st.stop()
@@ -535,7 +490,7 @@ def query_live_search(query: str) -> str:
             return "\n[Notice: Web harvesting layers are clear, running on foundational logic arrays.]"
 
 # =====================================================================
-#  🖥️ SAFE MARKDOWN VISUAL FORMATTER FUNCTION (BUG 2 RESOLVED PERMANENTLY)
+#  🖥️ SAFE MARKDOWN VISUAL FORMATTER FUNCTION
 # =====================================================================
 def safe_render_chat_card(role_label, text_content):
     """Detects raw code markers to dynamically route rendering formats cleanly."""
@@ -634,7 +589,6 @@ with st.sidebar:
 st.markdown("<h1 style='margin-bottom:0; font-weight:800; background: linear-gradient(135deg, #1e3a8a, #3b82f6); -webkit-background-clip: text; -webkit-text-fill-color: transparent;'>⚡ Offline Agent.Ai Dashboard</h1>", unsafe_allow_html=True)
 st.caption(f"Session Token Cluster Signature: `{st.session_state.current_session_id}`")
 
-# Render active conversation log rows safely sequentially from database frames
 if not st.session_state.chat_history and st.session_state.current_session_id:
     st.session_state.chat_history = load_session_chat_history(st.session_state.current_session_id)
 
@@ -644,7 +598,6 @@ if len(st.session_state.chat_history) > 0:
             if msg["role"] == "assistant":
                 safe_render_chat_card(cfg_tone, msg['content'])
             else:
-                # FIXED BUG 2: Combined the 'You:' anchor and variable safely inside a single visual block
                 st.markdown(f"<div class='chat-card'><b>You:</b><br>{msg['content']}</div>", unsafe_allow_html=True)
 
 st.markdown("---")
@@ -684,9 +637,6 @@ if final_query:
     if uploaded: display_string += f" 📎 ({uploaded.name})"
     payload_string = f"{final_query} {file_context}"
     
-    # =====================================================================
-    #  ⚡ GEMINI-TYPE REAL-TIME INTENT ROUTER GATING SYSTEM
-    # =====================================================================
     is_casual_greeting = final_query.strip().lower() in [
         "hi", "hello", "hey", "greetings", "good morning", "good afternoon", "yo", "sup"
     ]
@@ -695,7 +645,6 @@ if final_query:
         placeholder = st.empty()
         placeholder.markdown("🧠 **Offline Agent.Ai evaluating query routing intent...**")
         
-        # Multi-stage fact retrieval execution (Bypassed if query is a simple greeting)
         if is_casual_greeting:
             fact_context = "[Notice: User has initialized a casual chat greeting. Reference pack generation unnecessary.]"
         else:
@@ -703,37 +652,31 @@ if final_query:
             if not fact_context.strip():
                 fact_context = query_live_search(final_query)
             
-        # =====================================================================
-        #  🎯 ADAPTIVE PERSONA CONFIGURATION PATTERNS
-        # =====================================================================
         active_temperature = 0.1
         if cfg_tone == "Standard Agent":
-            active_temperature = 0.7  # Creative allowance for fluid dialogue flow
+            active_temperature = 0.7
             persona_behavior = """ROLE: You are an elite, natural general-purpose assistant.
             STYLE: Maintain a balanced, helpful, friendly, and highly clear conversational tone.
             OUTPUT RULES: If the user says 'Hi' or greets you, reply naturally with a warm welcome message (e.g., 'Hello! How can I assist you today?'). Do not analyze character definitions or alphabet positions."""
             
         elif cfg_tone == "Expert Professor":
-            active_temperature = 0.6  # Explanatory depth optimization parameters
+            active_temperature = 0.6
             persona_behavior = """ROLE: You are an advanced university Academic Professor holding dual PhD credentials.
             STYLE: Deeply technical, pedagogical, exhaustive, and verbose. Use complex educational terminology.
             OUTPUT RULES: Break down theories, historical backgrounds, and cite fundamental theorems. If the user greets you with 'Hi', greet them back warmly as a mentor before initiating standard operational loops."""
             
         elif cfg_tone == "Code Auditor":
-            active_temperature = 0.1  # Strict deterministic architectural logic execution
+            active_temperature = 0.1
             persona_behavior = """ROLE: You are a ruthless Senior Software Security Auditor and System Architect.
             STYLE: Direct, highly analytical, objective, and entirely formal. No friendly chat or generic introductions. Output clean markdown code elements where code blocks are produced.
             OUTPUT RULES: Analyze data or problems purely through code fragments, execution tracking limits, syntax edge-cases, algorithms, big-O efficiency matrix scales, or robust infrastructure vulnerability models."""
             
         elif cfg_tone == "Brief Summary Node":
-            active_temperature = 0.1  # Strict deterministic data compression
+            active_temperature = 0.1
             persona_behavior = """ROLE: You are a high-speed data compression pipeline.
             STYLE: Ultra-compact, dense, and minimalist. 
             OUTPUT RULES: Compress your entire final answer into exactly three high-impact, short bullet points. Do not include introductory text, explanations, or sign-offs under any condition."""
 
-        # =====================================================================
-        #  📜 COMPREHENSIVE SYSTEM PROMPT CONTEXT PACK
-        # =====================================================================
         rules = f"""System Context Configuration: You are the multi-agent system layer of 'Offline Agent.Ai', custom-engineered by Mrinal Gorain from Nalhati Government Polytechnic, Computer Science & Technology department.
 Project portfolio records were compiled by Prami Hazra and Sanchari Choudhury.
 
@@ -755,13 +698,12 @@ REAL-TIME CONTEXT REFERENCE OBJECT:
                 {"role": "user", "content": payload_string}
             ],
             "max_tokens": 1200,
-            "temperature": active_temperature  # Fluid parameters scaled by active mode
+            "temperature": active_temperature
         }
         
         try:
             save_message(st.session_state.login_username, st.session_state.current_session_id, "user", display_string)
 
-            # Fire request to Hugging Face Cloud Router pipelines
             response = requests.post(CLOUD_INFERENCE_URL, headers=headers, json=chat_payload, timeout=18)
             res_json = response.json()
             
@@ -773,7 +715,6 @@ REAL-TIME CONTEXT REFERENCE OBJECT:
                 st.session_state.chat_history.append({"role": "assistant", "content": full_text})
                 
                 with placeholder.container():
-                    # FIXED BUG 1: Stripped the broken raw HTML label block wrapper strings completely
                     st.markdown(f"<div class='chat-card'><b>You:</b><br>{display_string}</div>", unsafe_allow_html=True)
                     safe_render_chat_card(cfg_tone, full_text)
                     
