@@ -23,27 +23,24 @@ except ImportError:
 from streamlit_mic_recorder import speech_to_text
 
 # =====================================================================
-#  ☀️ INITIALIZATION & GLOBAL GOOGLE SEO MATRIX (RENDERS FIRST)
+#  ☀️ INITIALIZATION & EXTRA-PREMIUM VISUAL CSS PACK (RENDER FIRST)
 # =====================================================================
-st.set_page_config(
-    page_title="Offline Agent.Ai - Advanced Multi-Agent Intelligence Hub", 
-    page_icon="⚡", 
-    layout="wide",
-    initial_sidebar_state="expanded"
-)
+st.set_page_config(page_title="Offline Agent.Ai Workspace", page_icon="⚡", layout="wide")
 
-# 🚀 CRITICAL STEP FOR GOOGLE SEARCH CONSOLE INDEXING:
-# Place your Google Verification code meta tag directly inside this block snippet:
-st.markdown("""
-    <head>
-        <meta name="google-site-verification" content="PASTE_YOUR_VERIFICATION_TOKEN_HERE" />
-        <meta name="description" content="Offline Agent.Ai Dashboard - An advanced multi-agent multimodal automation hub custom-engineered by Mrinal Gorain, Computer Science department, Nalhati Government Polytechnic.">
-        <meta name="keywords" content="Offline Agent.Ai, Offline Agent AI, Mrinal Gorain, Nalhati Government Polytechnic, Agent AI Dashboard, Streamlit AI Agent">
-        <meta name="author" content="Mrinal Gorain">
-    </head>
-""", unsafe_allow_html=True)
+if "login_role" not in st.session_state:
+    st.session_state.login_role = None  
+if "login_username" not in st.session_state:
+    st.session_state.login_username = None
+if "chat_history" not in st.session_state:
+    st.session_state.chat_history = []
+if "sidebar_queries" not in st.session_state:
+    st.session_state.sidebar_queries = []
+if "active_payload" not in st.session_state:
+    st.session_state.active_payload = ""
+if "current_session_id" not in st.session_state:
+    st.session_state.current_session_id = str(uuid.uuid4())
 
-# Premium Professional Theme Styling (Light Mode Clean Interface Layout)
+# Professional Premium Styling Customization (Light-Themed Modern Look)
 st.markdown("""
     <style>
     .stApp, [data-testid="stAppViewContainer"], [data-testid="stSidebar"] {
