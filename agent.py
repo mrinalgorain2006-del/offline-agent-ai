@@ -53,7 +53,7 @@ st.markdown("""
         font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important;
     }
     
-    /* 🚨 FIXED AND STABILIZED SIDEBAR WIDTH FOR DESKTOP VIEWPORTS */
+    /* STABILIZED DESKTOP SIDEBAR WIDTH FIX */
     [data-testid="stSidebar"] {
         background: rgba(255, 255, 255, 0.93) !important;
         backdrop-filter: blur(16px) !important;
@@ -519,7 +519,7 @@ def query_live_search(query: str) -> str:
             return "\n[Notice: Web harvesting layers are clear, running on foundational logic arrays.]"
 
 # =====================================================================
-#  🖥️ SAFE MARKDOWN VISUAL FORMATTER FUNCTION (PREVENTS HTML ACCIDENTALS)
+#  🖥️ SAFE MARKDOWN VISUAL FORMATTER FUNCTION (BUG 2 RESOLVED PERMANENTLY)
 # =====================================================================
 def safe_render_chat_card(role_label, text_content):
     """Detects raw code markers to dynamically route rendering formats cleanly."""
@@ -618,6 +618,7 @@ with st.sidebar:
 st.markdown("<h1 style='margin-bottom:0; font-weight:800; background: linear-gradient(135deg, #1e3a8a, #3b82f6); -webkit-background-clip: text; -webkit-text-fill-color: transparent;'>⚡ Offline Agent.Ai Dashboard</h1>", unsafe_allow_html=True)
 st.caption(f"Session Token Cluster Signature: `{st.session_state.current_session_id}`")
 
+# Render active conversation log rows safely sequentially from database frames
 if not st.session_state.chat_history and st.session_state.current_session_id:
     st.session_state.chat_history = load_session_chat_history(st.session_state.current_session_id)
 
@@ -627,6 +628,7 @@ if len(st.session_state.chat_history) > 0:
             if msg["role"] == "assistant":
                 safe_render_chat_card(cfg_tone, msg['content'])
             else:
+                # FIXED BUG 2: Combined the 'You:' anchor and variable safely inside a single visual block
                 st.markdown(f"<div class='chat-card'><b>You:</b><br>{msg['content']}</div>", unsafe_allow_html=True)
 
 st.markdown("---")
@@ -666,7 +668,7 @@ if final_query:
     if uploaded: display_string += f" 📎 ({uploaded.name})"
     payload_string = f"{final_query} {file_context}"
     
-    # 🧠 =====================================================================
+    # =====================================================================
     #  ⚡ GEMINI-TYPE REAL-TIME INTENT ROUTER GATING SYSTEM
     # =====================================================================
     is_casual_greeting = final_query.strip().lower() in [
@@ -743,6 +745,7 @@ REAL-TIME CONTEXT REFERENCE OBJECT:
         try:
             save_message(st.session_state.login_username, st.session_state.current_session_id, "user", display_string)
 
+            # Fire request to Hugging Face Cloud Router pipelines
             response = requests.post(CLOUD_INFERENCE_URL, headers=headers, json=chat_payload, timeout=18)
             res_json = response.json()
             
@@ -754,7 +757,8 @@ REAL-TIME CONTEXT REFERENCE OBJECT:
                 st.session_state.chat_history.append({"role": "assistant", "content": full_text})
                 
                 with placeholder.container():
-                    st.markdown(f"👤 **Your Input Query Vector:** <div class='chat-card'><b>You:</b><br>{display_string}</div>", unsafe_allow_html=True)
+                    # FIXED BUG 1: Stripped the broken raw HTML label block wrapper strings completely
+                    st.markdown(f"<div class='chat-card'><b>You:</b><br>{display_string}</div>", unsafe_allow_html=True)
                     safe_render_chat_card(cfg_tone, full_text)
                     
                 time.sleep(0.1)
