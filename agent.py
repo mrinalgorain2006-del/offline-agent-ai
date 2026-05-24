@@ -23,69 +23,147 @@ except ImportError:
 from streamlit_mic_recorder import speech_to_text
 
 # =====================================================================
-#  ☀️ INITIALIZATION & EXTRA-PREMIUM VISUAL CSS PACK (RENDER FIRST)
+#  ☀️ INITIALIZATION & EXTRA-PREMIUM VISUAL ENGINE (NEOMORPHIC LIGHT MODE)
 # =====================================================================
-st.set_page_config(page_title="Offline Agent.Ai Workspace", page_icon="⚡", layout="wide")
+st.set_page_config(
+    page_title="Offline Agent.Ai - Immersive Intelligence Hub", 
+    page_icon="⚡", 
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
 
-if "login_role" not in st.session_state:
-    st.session_state.login_role = None  
-if "login_username" not in st.session_state:
-    st.session_state.login_username = None
-if "chat_history" not in st.session_state:
-    st.session_state.chat_history = []
-if "sidebar_queries" not in st.session_state:
-    st.session_state.sidebar_queries = []
-if "active_payload" not in st.session_state:
-    st.session_state.active_payload = ""
-if "current_session_id" not in st.session_state:
-    st.session_state.current_session_id = str(uuid.uuid4())
+# Global Google SEO Matrix and Mobile Responsive Header Elements
+st.markdown("""
+    <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+        <meta name="google-site-verification" content="PASTE_YOUR_VERIFICATION_TOKEN_HERE" />
+        <meta name="description" content="Offline Agent.Ai Dashboard - An advanced multi-agent multimodal automation hub custom-engineered by Mrinal Gorain, Computer Science department, Nalhati Government Polytechnic.">
+        <meta name="keywords" content="Offline Agent.Ai, Offline Agent AI, Mrinal Gorain, Nalhati Government Polytechnic, Agent AI Dashboard, Streamlit AI Agent">
+        <meta name="author" content="Mrinal Gorain">
+    </head>
+""", unsafe_allow_html=True)
 
-# Professional Premium Styling Customization (Light-Themed Modern Look)
+# Immersive Ultra-Premium Design Styling Pack (Responsive UI Mobile + Desktop)
 st.markdown("""
     <style>
+    /* Global Background and Smooth Transitions */
     .stApp, [data-testid="stAppViewContainer"], [data-testid="stSidebar"] {
-        background-color: #ffffff !important;
+        background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%) !important;
         color: #0f172a !important;
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important;
     }
+    
+    /* Sleek Sidebar Customization */
+    [data-testid="stSidebar"] {
+        background: rgba(255, 255, 255, 0.9) !important;
+        backdrop-filter: blur(12px) !important;
+        border-right: 1px solid rgba(226, 232, 240, 0.8) !important;
+    }
+    
+    /* Modern Input, Selection Box, and Textarea Fields */
     div[data-baseweb="input"], div[data-baseweb="select"], div[data-baseweb="textarea"] {
-        background-color: #f1f5f9 !important;
-        border: 2px solid #cbd5e1 !important;
-        border-radius: 14px !important;
+        background-color: #ffffff !important;
+        border: 1px solid #cbd5e1 !important;
+        border-radius: 16px !important;
+        box-shadow: 0 2px 4px rgba(15, 23, 42, 0.02) !important;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
     }
     div[data-baseweb="input"]:focus-within, div[data-baseweb="textarea"]:focus-within {
-        border-color: #4a90e2 !important;
+        border-color: #3b82f6 !important;
+        box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.15) !important;
         background-color: #ffffff !important;
     }
+    
+    /* Form Input Element Overrides */
     input, select, textarea, [data-baseweb="select"] div {
         color: #0f172a !important;
         -webkit-text-fill-color: #0f172a !important;
+        font-weight: 500 !important;
     }
-    span, p, div, label, small, h1, h2, h3, h4, h5, h6, li {
-        color: #0f172a !important;
-    }
+    
+    /* File Uploader Container */
     [data-testid="stFileUploader"] {
-        background-color: #f8fafc !important;
+        background-color: rgba(255, 255, 255, 0.7) !important;
         border: 2px dashed #cbd5e1 !important;
-        border-radius: 14px !important;
+        border-radius: 20px !important;
+        padding: 10px !important;
+        transition: all 0.2s ease !important;
     }
+    [data-testid="stFileUploader"]:hover {
+        border-color: #3b82f6 !important;
+        background-color: #ffffff !important;
+    }
+    
+    /* Academic Registry Modern Presentation Cards */
     .team-box-blue { 
-        background-color: #f8fafc !important; border: 1px solid #e2e8f0 !important;
-        border-left: 5px solid #3b82f6 !important; padding: 12px 14px !important; border-radius: 8px !important; margin-bottom: 10px !important; 
+        background: linear-gradient(135deg, #ffffff 0%, #f0fdf4 100%) !important;
+        border: 1px solid #e2e8f0 !important;
+        border-left: 6px solid #3b82f6 !important;
+        padding: 14px !important; border-radius: 14px !important; margin-bottom: 12px !important; 
+        box-shadow: 0 4px 6px -1px rgba(0,0,0,0.03);
     }
     .team-box-green { 
-        background-color: #f8fafc !important; border: 1px solid #e2e8f0 !important;
-        border-left: 5px solid #10b981 !important; padding: 12px 14px !important; border-radius: 8px !important; margin-bottom: 10px !important; 
+        background: linear-gradient(135deg, #ffffff 0%, #f0fdf4 100%) !important;
+        border: 1px solid #e2e8f0 !important;
+        border-left: 6px solid #10b981 !important;
+        padding: 14px !important; border-radius: 14px !important; margin-bottom: 12px !important; 
+        box-shadow: 0 4px 6px -1px rgba(0,0,0,0.03);
     }
     .team-box-orange { 
-        background-color: #f8fafc !important; border: 1px solid #e2e8f0 !important;
-        border-left: 5px solid #f97316 !important; padding: 12px 14px !important; border-radius: 8px !important; margin-bottom: 10px !important; 
+        background: linear-gradient(135deg, #ffffff 0%, #fff7ed 100%) !important;
+        border: 1px solid #e2e8f0 !important;
+        border-left: 6px solid #f97316 !important;
+        padding: 14px !important; border-radius: 14px !important; margin-bottom: 12px !important; 
+        box-shadow: 0 4px 6px -1px rgba(0,0,0,0.03);
     }
+    
+    /* Premium Premium Glassmorphism Chat Bubble Containers */
     .chat-card { 
-        background-color: #f8fafc; border: 1px solid #e2e8f0; padding: 18px; border-radius: 16px; margin-bottom: 10px; line-height: 1.6;
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+        background: rgba(255, 255, 255, 0.85) !important;
+        backdrop-filter: blur(8px) !important;
+        border: 1px solid rgba(226, 232, 240, 0.8) !important;
+        padding: 20px !important; 
+        border-radius: 24px !important; 
+        margin-bottom: 14px !important; 
+        line-height: 1.65 !important;
+        box-shadow: 0 10px 15px -3px rgba(15, 23, 42, 0.04), 0 4px 6px -2px rgba(15, 23, 42, 0.02) !important;
+        transition: transform 0.2s ease !important;
     }
-    div[data-testid="stSidebar"] button, div[data-testid="stHorizontalBlock"] button { background-color: #f1f5f9 !important; border: 1px solid #e2e8f0 !important; }
-    div[data-testid="stFormSubmitButton"] button { background-color: #4a90e2 !important; color: #ffffff !important; }
+    .chat-card:hover {
+        transform: translateY(-2px);
+    }
+    
+    /* Interactive Button Transitions */
+    div[data-testid="stSidebar"] button, div[data-testid="stHorizontalBlock"] button {
+        background-color: #ffffff !important;
+        border: 1px solid #e2e8f0 !important;
+        border-radius: 12px !important;
+        font-weight: 600 !important;
+        transition: all 0.2s ease !important;
+    }
+    div[data-testid="stSidebar"] button:hover, div[data-testid="stHorizontalBlock"] button:hover {
+        background-color: #f8fafc !important;
+        border-color: #cbd5e1 !important;
+        transform: scale(1.01);
+    }
+    div[data-testid="stFormSubmitButton"] button {
+        background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%) !important;
+        color: #ffffff !important;
+        border-radius: 16px !important;
+        border: none !important;
+        box-shadow: 0 4px 10px rgba(37, 99, 235, 0.2) !important;
+        font-weight: 700 !important;
+    }
+    div[data-testid="stFormSubmitButton"] button:hover {
+        background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%) !important;
+        box-shadow: 0 6px 14px rgba(37, 99, 235, 0.3) !important;
+    }
+    
+    /* Custom Mobile Scrollbar Enhancements */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+    ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
     </style>
 """, unsafe_allow_html=True)
 
@@ -318,8 +396,8 @@ init_db()
 ADMIN_UID, ADMIN_PWD = "adminmg", "Pritam#@2006"
 
 def render_login_interface():
-    st.markdown("<h1 style='text-align: center; font-weight: 900; background: linear-gradient(135deg, #4a90e2, #ff7e5f); -webkit-background-clip: text; -webkit-text-fill-color: transparent;'>⚡ Offline Agent.Ai</h1>", unsafe_allow_html=True)
-    st.markdown("<p style='text-align: center; margin-top: -10px; font-weight: 600;'>Advanced Multimodal Automation Hub</p>", unsafe_allow_html=True)
+    st.markdown("<h1 style='text-align: center; font-weight: 900; background: linear-gradient(135deg, #3b82f6, #8b5cf6); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 0;'>⚡ Offline Agent.Ai</h1>", unsafe_allow_html=True)
+    st.markdown("<p style='text-align: center; margin-top: 0; color: #64748b; font-weight: 600;'>Advanced Multimodal Automation Hub</p>", unsafe_allow_html=True)
     
     tab_login, tab_signup, tab_forgot, tab_admin = st.tabs(["👤 User Access Login", "📝 Create Secure Account", "🔑 Forgot Key Recovery", "🔒 Administrator Hub Portal"])
     
@@ -358,7 +436,7 @@ def render_login_interface():
                         st.error("⚠️ Username token conflict across registry arrays.")
 
     with tab_forgot:
-        st.markdown("### 🔑 Account Password Retrieval Protocol")
+        st.markdown("<h4 style='margin-top: 10px;'>🔑 Account Password Retrieval Protocol</h4>", unsafe_allow_html=True)
         with st.form("password_recovery_form"):
             recovery_uid = st.text_input("Registered User ID Token", placeholder="Type your User ID here...")
             if st.form_submit_button("Retrieve Password Key 🔓", use_container_width=True):
@@ -434,7 +512,7 @@ def query_live_search(query: str) -> str:
 def safe_render_chat_card(role_label, text_content):
     """Detects raw code markers to dynamically route rendering formats cleanly."""
     if "```" in text_content:
-        st.markdown(f"⚡ **Offline Agent.Ai ({role_label} Mode) View:**")
+        st.markdown(f"🤖 **Offline Agent.Ai ({role_label} Mode) View:**")
         st.markdown(text_content)
     else:
         st.markdown(f"<div class='chat-card'><b>{role_label}:</b><br>{text_content}</div>", unsafe_allow_html=True)
@@ -443,14 +521,14 @@ def safe_render_chat_card(role_label, text_content):
 #  🎛️ SIDEBAR INTERACTIVE CONSOLE CONTROL PANEL
 # =====================================================================
 with st.sidebar:
-    st.markdown("<h2 style='margin:0; padding-bottom:10px;'>🤖 Offline Agent.Ai</h2>", unsafe_allow_html=True)
-    st.caption(f"Secure Node ID: `{st.session_state.login_username}` | Layer: `{st.session_state.login_role.upper()}`")
+    st.markdown("<h2 style='margin:0; padding-bottom:10px; background: linear-gradient(135deg, #2563eb, #7c3aed); -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-weight:800;'>🤖 Offline Agent.Ai</h2>", unsafe_allow_html=True)
+    st.caption(f"Node: `{st.session_state.login_username}` | Privacy: `{st.session_state.login_role.upper()}`")
     
     st.markdown("---")
     cfg_tone = st.selectbox("🎭 Active Agent Persona Matrix", ["Standard Agent", "Expert Professor", "Code Auditor", "Brief Summary Node"])
     
     if st.session_state.login_role == "user":
-        st.markdown("<div style='background: #f1f5f9; padding: 12px; border-radius: 10px; margin-bottom: 10px;'>🌟 <b>User Workspace Active</b><br><small>Fully functional, autonomous pipeline ready.</small></div>", unsafe_allow_html=True)
+        st.markdown("<div style='background: linear-gradient(135deg, #eff6ff, #dbeafe); padding: 12px; border-radius: 12px; border: 1px solid #bfdbfe; margin-bottom: 10px;'>🌟 <span style='font-weight:700; color:#1e40af;'>User Workspace Active</span><br><small style='color:#1e40af;'>Core operational arrays optimized.</small></div>", unsafe_allow_html=True)
 
     if st.session_state.login_role == "admin":
         st.markdown("---")
@@ -480,7 +558,7 @@ with st.sidebar:
     #  📂 NESTED SESSION HISTORY RECONSTRUCTION (CHATGPT STYLE FOLDERS)
     # =====================================================================
     st.markdown("---")
-    st.subheader("📁 Session Prompt History Registry")
+    st.subheader("📁 Session Prompt History")
     
     session_folders = get_session_folders_structure(st.session_state.login_username)
     
@@ -508,25 +586,25 @@ with st.sidebar:
                         st.rerun()
                 st.markdown("</div>", unsafe_allow_html=True)
     else:
-        st.caption("No conversational history structures recorded.")
+        st.caption("No history registries mapped.")
             
     st.markdown("---")
     st.subheader("📋 Academic Project Registry")
     st.markdown("""
-        <div class='team-box-blue'><b>Mrinal Gorain</b><br><small>Lead Systems Developer</small></div>
-        <div class='team-box-green'><b>Prami Hazra & Sanchari Choudhury</b><br><small>Technical Documentation Arrays</small></div>
-        <div class='team-box-orange'><b>Mainak Mukherjee & Manas Banerjee</b><br><small>Strategic Evaluation Architecture</small></div>
+        <div class='team-box-blue'><b style='color:#1e40af;'>Mrinal Gorain</b><br><small style='color:#1e40af;'>Lead Architecture Developer</small></div>
+        <div class='team-box-green'><b style='color:#065f46;'>Prami Hazra & Sanchari Choudhury</b><br><small style='color:#065f46;'>Technical Documentation Arrays</small></div>
+        <div class='team-box-orange'><b style='color:#9a3412;'>Mainak Mukherjee & Manas Banerjee</b><br><small style='color:#9a3412;'>Strategic Evaluation Management</small></div>
     """, unsafe_allow_html=True)
     
     st.markdown("---")
-    st.button("Reset Shell View Canvas", use_container_width=True, on_click=callback_clear_session)
-    st.button("Terminate Session Connection", use_container_width=True, on_click=callback_system_logout)
+    st.button("Reset Canvas Shell", use_container_width=True, on_click=callback_clear_session)
+    st.button("Disconnect Node", use_container_width=True, on_click=callback_system_logout)
 
 # =====================================================================
 #  💬 INTERACTIVE DISPLAY STREAM 
 # =====================================================================
-st.markdown("<h2 style='margin-bottom:0;'>⚡ Offline Agent.Ai Dashboard</h2>", unsafe_allow_html=True)
-st.caption(f"Session Token Array ID: `{st.session_state.current_session_id}`")
+st.markdown("<h1 style='margin-bottom:0; font-weight:800; background: linear-gradient(135deg, #1e3a8a, #3b82f6); -webkit-background-clip: text; -webkit-text-fill-color: transparent;'>⚡ Offline Agent.Ai Dashboard</h1>", unsafe_allow_html=True)
+st.caption(f"Session Token Cluster Signature: `{st.session_state.current_session_id}`")
 
 if not st.session_state.chat_history and st.session_state.current_session_id:
     st.session_state.chat_history = load_session_chat_history(st.session_state.current_session_id)
@@ -537,7 +615,7 @@ if len(st.session_state.chat_history) > 0:
             if msg["role"] == "assistant":
                 safe_render_chat_card(cfg_tone, msg['content'])
             else:
-                st.markdown(f"<div class='chat-card'>{msg['content']}</div>", unsafe_allow_html=True)
+                st.markdown(f"<div class='chat-card'><b>You:</b><br>{msg['content']}</div>", unsafe_allow_html=True)
 
 st.markdown("---")
 
@@ -545,7 +623,7 @@ col_file, col_mic = st.columns([6.0, 6.0])
 file_context, mic_transcription = "", None
 
 with col_file:
-    uploaded = st.file_uploader("Upload External Multi-Format Documents for RAG Embedding", type=["txt", "py", "c", "pdf", "json"], label_visibility="collapsed")
+    uploaded = st.file_uploader("Upload Multi-Format Context Token (PDF, TXT, PY, C, JSON)", type=["txt", "py", "c", "pdf", "json"], label_visibility="collapsed")
     if uploaded is not None:
         if uploaded.name.lower().endswith(".pdf") and pypdf is not None:
             reader = pypdf.PdfReader(io.BytesIO(uploaded.read()))
@@ -554,13 +632,13 @@ with col_file:
             file_context = f"\n[RAG ATTACHED ENCODED FILE OBJECT INJECTION:\n{uploaded.read().decode('utf-8', errors='ignore')}\n]"
 
 with col_mic:
-    st.markdown("<div style='margin-bottom: 5px; font-weight: 500;'>🎙️ High-Fidelity Speech Processing (Whisper Alignment)</div>", unsafe_allow_html=True)
+    st.markdown("<div style='margin-bottom: 6px; font-weight: 600; color: #475569;'>🎙️ High-Fidelity Speech Processing (Whisper Sync Loop)</div>", unsafe_allow_html=True)
     mic_transcription = speech_to_text(start_prompt="Initialize Audio Recording System", stop_prompt="Halt Stream & Extract Matrix", language="en", just_once=True)
 
 with st.form("central_agent_search_boundary", clear_on_submit=True):
     col_field, col_btn = st.columns([10.0, 2.0])
     with col_field:
-        ui_input = st.text_input("Global Multi-Agent Entry Array", placeholder="Query anything... Fallback search protocols are actively monitoring input sequences.", label_visibility="collapsed")
+        ui_input = st.text_input("Global Multi-Agent Entry Array", placeholder="Query anything... Fallback search protocols are active.", label_visibility="collapsed")
     with col_btn:
         triggered = st.form_submit_button("Execute Run 🚀", use_container_width=True)
 
@@ -600,19 +678,19 @@ if final_query:
         # =====================================================================
         active_temperature = 0.1
         if cfg_tone == "Standard Agent":
-            active_temperature = 0.7  # Creative allowance for dynamic dialogue flow
+            active_temperature = 0.7  # Creative allowance for fluid dialogue flow
             persona_behavior = """ROLE: You are an elite, natural general-purpose assistant.
             STYLE: Maintain a balanced, helpful, friendly, and highly clear conversational tone.
             OUTPUT RULES: If the user says 'Hi' or greets you, reply naturally with a warm welcome message (e.g., 'Hello! How can I assist you today?'). Do not analyze character definitions or alphabet positions."""
             
         elif cfg_tone == "Expert Professor":
-            active_temperature = 0.6  # High explanatory flow parameters
+            active_temperature = 0.6  # Explanatory depth optimization parameters
             persona_behavior = """ROLE: You are an advanced university Academic Professor holding dual PhD credentials.
             STYLE: Deeply technical, pedagogical, exhaustive, and verbose. Use complex educational terminology.
             OUTPUT RULES: Break down theories, historical backgrounds, and cite fundamental theorems. If the user greets you with 'Hi', greet them back warmly as a mentor before initiating standard operational loops."""
             
         elif cfg_tone == "Code Auditor":
-            active_temperature = 0.1  # Strict deterministic code checking layout
+            active_temperature = 0.1  # Strict deterministic architectural logic execution
             persona_behavior = """ROLE: You are a ruthless Senior Software Security Auditor and System Architect.
             STYLE: Direct, highly analytical, objective, and entirely formal. No friendly chat or generic introductions. Output clean markdown code elements where code blocks are produced.
             OUTPUT RULES: Analyze data or problems purely through code fragments, execution tracking limits, syntax edge-cases, algorithms, big-O efficiency matrix scales, or robust infrastructure vulnerability models."""
@@ -624,7 +702,7 @@ if final_query:
             OUTPUT RULES: Compress your entire final answer into exactly three high-impact, short bullet points. Do not include introductory text, explanations, or sign-offs under any condition."""
 
         # =====================================================================
-        #  📜 COMPREHENSIVE RULES SYSTEM (CLEANED OF RAW TAG BLEEDS)
+        #  📜 COMPREHENSIVE SYSTEM PROMPT CONTEXT PACK
         # =====================================================================
         rules = f"""System Context Configuration: You are the multi-agent system layer of 'Offline Agent.Ai', custom-engineered by Mrinal Gorain from Nalhati Government Polytechnic, Computer Science & Technology department.
 Project portfolio records were compiled by Prami Hazra and Sanchari Choudhury.
@@ -647,7 +725,7 @@ REAL-TIME CONTEXT REFERENCE OBJECT:
                 {"role": "user", "content": payload_string}
             ],
             "max_tokens": 1200,
-            "temperature": active_temperature  # Injects fluid creativity where required
+            "temperature": active_temperature  # Fluid parameters scaled by active mode
         }
         
         try:
@@ -664,7 +742,7 @@ REAL-TIME CONTEXT REFERENCE OBJECT:
                 st.session_state.chat_history.append({"role": "assistant", "content": full_text})
                 
                 with placeholder.container():
-                    st.markdown(f"👤 **Your Input Query Vector:** <div class='chat-card'>{display_string}</div>", unsafe_allow_html=True)
+                    st.markdown(f"👤 **Your Input Query Vector:** <div class='chat-card'><b>You:</b><br>{display_string}</div>", unsafe_allow_html=True)
                     safe_render_chat_card(cfg_tone, full_text)
                     
                 time.sleep(0.1)
