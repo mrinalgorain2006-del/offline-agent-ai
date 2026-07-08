@@ -504,7 +504,7 @@ def query_wikipedia_layer(query: str) -> str:
 def query_live_search(query: str) -> str:
     """Dynamic multi-tier fallback searching mechanism mimicking enterprise agents."""
     try:
-        from duckduckgo_search import DDGS
+        from kduckgo_search import DDGS
         with DDGS() as ddgs:
             res = [r for r in ddgs.text(query, max_results=4)]
         contexts = [f"Source URL: {r.get('href','')}\nSnippet Data: {r.get('body','')}\n---" for r in res]
@@ -614,7 +614,6 @@ with st.sidebar:
 # =====================================================================
 #  💬 INTERACTIVE DISPLAY STREAM 
 # =====================================================================
-# 🚨 FIXED AND UPGRADED TYPE CLASS STYLING FOR DYNAMIC LOGO DISPLAY
 st.markdown("<div class='main-title-container'><h1 class='workspace-heading'>⚡ Dashboard Offline Agent.Ai</h1></div>", unsafe_allow_html=True)
 st.caption(f"Session Token Cluster Signature: `{st.session_state.current_session_id}`")
 
@@ -637,11 +636,25 @@ file_context, mic_transcription = "", None
 with col_file:
     uploaded = st.file_uploader("Upload Multi-Format Context Token (PDF, TXT, PY, C, JSON)", type=["txt", "py", "c", "pdf", "json"], label_visibility="collapsed")
     if uploaded is not None:
+        uploaded_bytes = uploaded.getvalue()  # Memory stream extraction
+        extracted_text = ""
+        
         if uploaded.name.lower().endswith(".pdf") and pypdf is not None:
-            reader = pypdf.PdfReader(io.BytesIO(uploaded.read()))
-            file_context = f"\n[RAG ATTACHED PDF DATA INJECTION STREAM:\n" + "".join([p.extract_text() for p in reader.pages if p.extract_text()]) + "\n]"
+            try:
+                reader = pypdf.PdfReader(io.BytesIO(uploaded_bytes))
+                extracted_text = "".join([p.extract_text() for p in reader.pages if p.extract_text()])
+            except Exception:
+                extracted_text = ""
         else:
-            file_context = f"\n[RAG ATTACHED ENCODED FILE OBJECT INJECTION:\n{uploaded.read().decode('utf-8', errors='ignore')}\n]"
+            extracted_text = uploaded_bytes.decode('utf-8', errors='ignore')
+            
+        # 🚨 FALLBACK OCR INJECTION LAYER FOR SCANNED PAPERS / IMAGES
+        if not extracted_text.strip():
+            # If text extraction returns completely blank data, wrap the raw binary payload signature
+            # inside an automated description block to signal Llama-3's contextual parser.
+            file_context = f"\n[RAG SYSTEM ALERT: ATTACHED FILE '{uploaded.name}' APPEARS TO BE A SCANNED IMAGE / PHOTOGRAPH. RAW PAYLOAD SIZE: {len(uploaded_bytes)} BYTES. PROCEED BY INTERPRETING COGNITIVE LOGIC Scale arrays.]"
+        else:
+            file_context = f"\n[LOCAL DATASET FILE INJECTION MATRIX]:\n{extracted_text}"
 
 with col_mic:
     st.markdown("<div style='margin-bottom: 6px; font-weight: 600; color: #475569;'>🎙️ High-Fidelity Speech Processing (Whisper Sync Loop)</div>", unsafe_allow_html=True)
@@ -674,22 +687,25 @@ if final_query:
         if is_casual_greeting:
             fact_context = "[Notice: User has initialized a casual chat greeting. Reference pack generation unnecessary.]"
         else:
-            fact_context = query_wikipedia_layer(final_query)
-            if not fact_context.strip():
-                fact_context = query_live_search(final_query)
+            if file_context.strip() != "":
+                fact_context = file_context
+            else:
+                fact_context = query_wikipedia_layer(final_query)
+                if not fact_context.strip():
+                    fact_context = query_live_search(final_query)
             
         active_temperature = 0.1
         if cfg_tone == "Standard Agent":
             active_temperature = 0.7
             persona_behavior = """ROLE: You are an elite, natural general-purpose assistant.
             STYLE: Maintain a balanced, helpful, friendly, and highly clear conversational tone.
-            OUTPUT RULES: If the user says 'Hi' or greets you, reply naturally with a warm welcome message (e.g., 'Hello! How can I assist you today?'). Do not analyze character definitions or alphabet positions."""
+            OUTPUT RULES: Answer the user requirements completely. If parsing an uploaded exam question set or text dataset, evaluate answers question-by-question dynamically as outlined."""
             
         elif cfg_tone == "Expert Professor":
             active_temperature = 0.6
             persona_behavior = """ROLE: You are an advanced university Academic Professor holding dual PhD credentials.
             STYLE: Deeply technical, pedagogical, exhaustive, and verbose. Use complex educational terminology.
-            OUTPUT RULES: Break down theories, historical backgrounds, and cite fundamental theorems. If the user greets you with 'Hi', greet them back warmly as a mentor before initiating standard operational loops."""
+            OUTPUT RULES: Break down academic concepts. For multiple-choice questions (MCQs), state the correct option clearly and provide a comprehensive explanation for each answer. Keep long answers complete but written in direct, clear prose."""
             
         elif cfg_tone == "Code Auditor":
             active_temperature = 0.1
@@ -706,10 +722,10 @@ if final_query:
         rules = f"""System Context Configuration: You are the multi-agent system layer of 'Offline Agent.Ai', custom-engineered by Mrinal Gorain from Nalhati Government Polytechnic, Computer Science & Technology department.
 Project portfolio records were compiled by Prami Hazra and Sanchari Choudhury.
 
-MANDATORY STYLE AND REASONING LAWS:
+MANDATORY REASONING scale MATRIX LAWS:
 {persona_behavior}
 
-1. ABSOLUTE LIVE TRUTH ENFORCEMENT: Focus on the user input query vector. Answer directly, confidently, and naturally. If it is a greeting ("Hi", "Hello"), ignore historical definitions and greet them back dynamically.
+1. EXAM BREAKDOWN DIRECTIVES: If evaluating an exam question template context paper, answer question-by-question marks wise. For all MCQs, award the correct choice selection option with an explicit factual validation explanation. For all Long Answer Questions (LAQs), express answers using direct, short sentences to ensure optimal presentation layout flow while preserving standard academic scoring limits.
 2. ZERO META-TALK POLICY: You are completely banned from mentioning your training cutoff limits, dataset parameters, or saying phrases like "as of my knowledge cutoff" or "the data provided states". Never tell the user to verify information elsewhere—you are the final authority.
 3. OUTPUT RESTRICTIONS: Do not add trailing math markup boxes ($ symbols), HTML div fragments, system prompt logs, code indexes, or formatting descriptions at the absolute end of your output screen box. Keep responses tightly contained inside your role style. Give only the clean answer text.
 
